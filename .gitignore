@@ -1,8 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,windows,intellij,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,windows,intellij,dotenv
 
-### dotenv ###
-.env
+
 
 ### Intellij ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
