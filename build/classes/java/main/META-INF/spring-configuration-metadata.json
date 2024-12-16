@@ -1,0 +1,27 @@
+{
+  "groups": [
+    {
+      "name": "spring.security.oauth2.client.registration.kakao",
+      "type": "com.example.user.config.KaKaoConfig",
+      "sourceType": "com.example.user.config.KaKaoConfig"
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.security.oauth2.client.registration.kakao.client-id",
+      "type": "java.lang.String",
+      "sourceType": "com.example.user.config.KaKaoConfig"
+    },
+    {
+      "name": "spring.security.oauth2.client.registration.kakao.client-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.example.user.config.KaKaoConfig"
+    },
+    {
+      "name": "spring.security.oauth2.client.registration.kakao.redirect-uri",
+      "type": "java.lang.String",
+      "sourceType": "com.example.user.config.KaKaoConfig"
+    }
+  ],
+  "hints": []
+}
