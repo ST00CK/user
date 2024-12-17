@@ -29,6 +29,11 @@ public class UserService {
         emailService.sendEmail(email, authCode);
     }
 
+    //비밀번호변경 메일전송 메서드
+    private void sendPasswordFindEmail(String email, String authCode) throws MessagingException {
+        emailService.sendPasswordFindEmail(email, authCode);
+    }
+
     //폼로그인
     @Transactional
     public void saveFormUser(FormUserDto formUserDto, UserDto userDto) {
@@ -57,6 +62,52 @@ public class UserService {
         } catch (Exception e) {
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
+    }
+
+    //비밀번호 변경요청 이메일 인증 코드
+    @Transactional
+    public void findPassword(String userId, String email, String inputAuthCode, String newPasswd) throws MessagingException {
+        UserDto userDto = userMapper.findByUserId(userId);
+        if (userDto == null || userDto.getEmail().equals(email)) {
+            throw new RuntimeException("사용자 정보가 일치하지 않습니다");
+        }
+        //인증코드 생성
+        String authCode = emailService.generateAuthCode();
+
+        //인증코드 메일로 전송
+        sendPasswordFindEmail(email, authCode);
+
+        //입력된 인증 코드와 실제 인증 코드 비교
+        if (!authCode.equals(inputAuthCode)) {
+            throw new RuntimeException("인증코드가 일치하지 않습니다.");
+        }
+        String encodedPassword = bCryptPasswordEncoder.encode(newPasswd);
+
+        //비밀번호 업데이트
+        formUserMapper.findPassword(userId, encodedPassword);
+    }
+
+    @Transactional
+    //로그인한 상태에서 비밀번호 변경
+    public void changePassword(String userId, String oldPassword, String newPassword, UserDto userDto) {
+        FormUserDto formUserDto = formUserMapper.findByUserId(userId);
+
+        if (formUserDto == null) {
+            throw new RuntimeException("사용자 정보가 없습니다.");
+        }
+
+        //기존 비밀번호와 입력한 비밀번호가 일치하는지 확인
+        if (!bCryptPasswordEncoder.matches(oldPassword, formUserDto.getPasswd())) {
+            throw new RuntimeException("기존 비밀번호가 일치하지 않습니다.");
+        }
+        //새로운 비밀번호 암호화
+        String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
+
+        //새로운 비밀번호 업데이트
+        formUserMapper.findPassword(userId, encodedPassword);
+
+        //토큰을 db에 업데이트
+        userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), userDto.getAccess_token(), userDto.getRefresh_token());
     }
 
     //소셜유저 로그인

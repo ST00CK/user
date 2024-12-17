@@ -61,7 +61,7 @@ public class EmailService {
     }
 
     //비밀번호 변경 메서드
-    public void sendPasswordChangeEmail(String to, String authCode) throws MessagingException {
+    public void sendPasswordFindEmail(String to, String authCode) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 

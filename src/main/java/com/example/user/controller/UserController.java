@@ -21,6 +21,8 @@ public class UserController {
     private final KaKaoService kaKaoService;
     private final JwtUtils jwtUtils; // JwtUtils를 주입받음
 
+
+    //폼로그인
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto) {
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
@@ -41,6 +43,8 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
+
 
     // 카카오 토큰을 받아오는 API - 'access_token'을 직접 받음
     @PostMapping("/api/kakao-token")
@@ -84,7 +88,7 @@ public class UserController {
                 });
     }
 
-    // 소셜 사용자 정보와 함께 카카오 사용자 정보 저장
+    // 소셜 로그인
     @PostMapping("/socialuser")
     public Mono<ResponseEntity<Map<String, Object>>> saveSocialUser(@RequestBody Map<String, Object> requestData) {
         // 전달받은 socialUserDto와 userDto 추출

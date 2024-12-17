@@ -10,4 +10,6 @@ public interface FormUserMapper {
     void save(FormUserDto formuserdto);
 
     FormUserDto findByUserId(String user_id);
+
+    void findPassword(String user_id, String passwd);
 }
