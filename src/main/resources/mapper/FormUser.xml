@@ -12,12 +12,12 @@
     <select id="findByUserId" parameterType="String" resultType="FormUserDto">
         select *
         from form_user
-        where user_id = #{user_id}}
+        where user_id = #{user_id}
     </select>
 
     <!--    비밀변호 변경-->
     <update id="findPassword" parameterType="map">
-        update user
+        update form_user
         set passwd = #{passwd}
         where user_id = #{user_id}
     </update>

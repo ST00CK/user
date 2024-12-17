@@ -44,6 +44,37 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    //비밀번호 찾기
+    @PostMapping("find/password")
+    public ResponseEntity<String> findPassword(@RequestBody findPasswordRequestDto findPasswordRequestDto) {
+        try {
+            userService.findPassword(
+                    findPasswordRequestDto.getUserId(),
+                    findPasswordRequestDto.getEmail(),
+                    findPasswordRequestDto.getAuthCode(),
+                    findPasswordRequestDto.getNewPassword()
+            );
+            return ResponseEntity.ok("비밀번호를 성공적으로 변경하였습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    //로그인한 상태에서 비밀번호 변경
+    @PostMapping("change/password")
+    public ResponseEntity<String> changePassword(@RequestBody changePasswordRequestDto changePasswordRequestDto) {
+        try {
+            userService.changePassword(
+                    changePasswordRequestDto.getUserId(),
+                    changePasswordRequestDto.getOldPassword(),
+                    changePasswordRequestDto.getNewPassword()
+            );
+            return ResponseEntity.ok("비밀번호를 성공적으로 변경하였습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 
 
     // 카카오 토큰을 받아오는 API - 'access_token'을 직접 받음

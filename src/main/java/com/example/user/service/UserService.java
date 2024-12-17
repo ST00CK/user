@@ -8,6 +8,7 @@ import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,7 @@ public class UserService {
     private final SocialUserMapper socialUserMapper;
 
 
-    //메일전송 메서드
+    //회원가입 메일전송 메서드
     private void sendAuthCodeEmail(String email, String authCode) throws MessagingException {
         emailService.sendEmail(email, authCode);
     }
@@ -68,11 +69,14 @@ public class UserService {
     @Transactional
     public void findPassword(String userId, String email, String inputAuthCode, String newPasswd) throws MessagingException {
         UserDto userDto = userMapper.findByUserId(userId);
-        if (userDto == null || userDto.getEmail().equals(email)) {
+        if (userDto == null || !userDto.getEmail().equals(email)) {
             throw new RuntimeException("사용자 정보가 일치하지 않습니다");
         }
-        //인증코드 생성
-        String authCode = emailService.generateAuthCode();
+//        //인증코드 생성
+//        String authCode = emailService.generateAuthCode();
+
+        //테스트용
+        String authCode = "123456";
 
         //인증코드 메일로 전송
         sendPasswordFindEmail(email, authCode);
@@ -87,28 +91,36 @@ public class UserService {
         formUserMapper.findPassword(userId, encodedPassword);
     }
 
-    @Transactional
-    //로그인한 상태에서 비밀번호 변경
-    public void changePassword(String userId, String oldPassword, String newPassword, UserDto userDto) {
-        FormUserDto formUserDto = formUserMapper.findByUserId(userId);
 
+    //로그인한 상태에서 비밀번호 변경
+    @Transactional
+    public void changePassword(String userId, String oldPassword, String newPassword) {
+        // 일반 로그인 사용자 확인
+        FormUserDto formUserDto = formUserMapper.findByUserId(userId);
         if (formUserDto == null) {
-            throw new RuntimeException("사용자 정보가 없습니다.");
+            throw new RuntimeException("일반 로그인 사용자가 아닙니다.");
         }
 
-        //기존 비밀번호와 입력한 비밀번호가 일치하는지 확인
+        // 기존 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(oldPassword, formUserDto.getPasswd())) {
             throw new RuntimeException("기존 비밀번호가 일치하지 않습니다.");
         }
-        //새로운 비밀번호 암호화
-        String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
 
-        //새로운 비밀번호 업데이트
+        //새 비밀번호가 비어있지 않은지 확인
+        if (newPassword == null || newPassword.isEmpty()) {
+            throw new RuntimeException("새 비밀번호가 비어있습니다.");
+        }
+
+        // 새 비밀번호 암호화 및 업데이트
+        String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
         formUserMapper.findPassword(userId, encodedPassword);
 
-        //토큰을 db에 업데이트
-        userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), userDto.getAccess_token(), userDto.getRefresh_token());
+        // 토큰 재발급 및 업데이트
+        String newAccessToken = "newAccessToken"; // 실제 토큰 재발급 로직 추가
+        String newRefreshToken = "newRefreshToken";
+        userMapper.updateAccessTokenAndRefreshToken(userId, newAccessToken, newRefreshToken);
     }
+
 
     //소셜유저 로그인
     @Transactional

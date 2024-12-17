@@ -12,7 +12,7 @@ spring:
           kakao:
             authorization-grant-type: authorization_code
             client-id: a800673bed60dbdb9897f7c7f046f7ef
-            client-secret: irfTlDPWehEHlTcvKbvCxxG5CKxEKWH0
+            client-secret: ${KAKAO_CLIENT_SECRET}
             scope: profile_nickname, account_email, profile_image,openid
             client-name: Kakao
             provider: kakao
