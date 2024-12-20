@@ -1,9 +1,6 @@
 package com.example.user.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.apache.ibatis.type.Alias;
 
 @Data
@@ -21,4 +18,5 @@ public class UserDto {
     private String file; //프로필사진
     private long access_token_expiry;  // 액세스 토큰 만료 시간
     private long refresh_token_expiry; // 리프레시 토큰 만료 시간
+
 }

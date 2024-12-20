@@ -3,8 +3,6 @@ package com.example.user.mapper;
 import com.example.user.dto.UserDto;
 import org.apache.ibatis.annotations.Mapper;
 
-import java.util.List;
-
 @Mapper
 public interface UserMapper {
 
@@ -15,5 +13,7 @@ public interface UserMapper {
     UserDto findByUserId(String user_id);
 
     void updateAccessTokenAndRefreshToken(String user_id, String access_token, String refresh_token);
+
+    int invalidateAccessToken(String access_token);
 
 }

@@ -3,30 +3,37 @@
 <mapper namespace="com.example.user.mapper.UserMapper">
 
 
-<!--    폼로그인-->
+    <!--    폼로그인-->
     <insert id="save" parameterType="UserDto" keyProperty="user_id">
-    insert into user (user_id, name, email, access_token, refresh_token, file)
-    values (#{user_id},#{name},#{email},#{access_token},#{refresh_token},#{file})
+        insert into user (user_id, name, email, access_token, refresh_token, file)
+        values (#{user_id}, #{name}, #{email}, #{access_token}, #{refresh_token}, #{file})
     </insert>
-<!--    소셜로그인-->
+    <!--    소셜로그인-->
     <insert id="socialSave" parameterType="UserDto" keyProperty="user_id">
         insert into user (user_id, name, email, access_token, refresh_token, file)
-        values (#{user_id},#{name},#{email},#{access_token},#{refresh_token},#{file})
+        values (#{user_id}, #{name}, #{email}, #{access_token}, #{refresh_token}, #{file})
     </insert>
 
-<!--기존회원인지 아닌지 확인-->
+    <!--기존회원인지 아닌지 확인-->
     <select id="findByUserId" parameterType="String" resultType="UserDto">
-        select * from user where user_id = #{user_id}
+        select *
+        from user
+        where user_id = #{user_id}
     </select>
 
-<!--    토큰 업데이트-->
+    <!--    토큰 업데이트-->
     <update id="updateAccessTokenAndRefreshToken" parameterType="map">
         update user
-        set access_token = #{access_token}, refresh_token = #{refresh_token}
+        set access_token  = #{access_token},
+            refresh_token = #{refresh_token}
         where user_id = #{user_id}
     </update>
 
-
+    <update id="invalidateAccessToken" parameterType="String">
+        delete
+        from user
+        where access_token = #{access_token}
+    </update>
 
 
 </mapper>

@@ -6,6 +6,7 @@ import com.example.user.dto.UserDto;
 import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
+import com.example.user.util.JwtUtils;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.apache.catalina.User;
@@ -23,6 +24,7 @@ public class UserService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder; // 생성자 주입
     private final EmailService emailService;
     private final SocialUserMapper socialUserMapper;
+    private final JwtUtils jwtUtils;
 
 
     //회원가입 메일전송 메서드
@@ -33,6 +35,22 @@ public class UserService {
     //비밀번호변경 메일전송 메서드
     private void sendPasswordFindEmail(String email, String authCode) throws MessagingException {
         emailService.sendPasswordFindEmail(email, authCode);
+    }
+
+
+    //로그아웃
+    @Transactional
+    public void logout(String token) {
+        // DB 업데이트 쿼리 호출
+        int updatedRows = userMapper.invalidateAccessToken(token);
+
+        // 업데이트된 행 수 로그 출력
+        System.out.println("로그아웃 처리, 업데이트된 행 수: " + updatedRows);
+
+        // 업데이트된 행이 없다면, 로그 출력
+        if (updatedRows == 0) {
+            System.out.println("해당 토큰으로 업데이트된 레코드가 없습니다. 토큰: " + token);
+        }
     }
 
     //폼로그인
@@ -95,30 +113,38 @@ public class UserService {
     //로그인한 상태에서 비밀번호 변경
     @Transactional
     public void changePassword(String userId, String oldPassword, String newPassword) {
-        // 일반 로그인 사용자 확인
+        // 1. 폼 유저 확인 (비밀번호 검증)
         FormUserDto formUserDto = formUserMapper.findByUserId(userId);
         if (formUserDto == null) {
             throw new RuntimeException("일반 로그인 사용자가 아닙니다.");
         }
 
-        // 기존 비밀번호 검증
+        // 2. 기존 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(oldPassword, formUserDto.getPasswd())) {
             throw new RuntimeException("기존 비밀번호가 일치하지 않습니다.");
         }
 
-        //새 비밀번호가 비어있지 않은지 확인
+        // 3. 새 비밀번호가 비어있지 않은지 확인
         if (newPassword == null || newPassword.isEmpty()) {
             throw new RuntimeException("새 비밀번호가 비어있습니다.");
         }
 
-        // 새 비밀번호 암호화 및 업데이트
+        // 4. 새 비밀번호 암호화 및 업데이트
         String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
-        formUserMapper.findPassword(userId, encodedPassword);
+        formUserMapper.findPassword(userId, encodedPassword);  // 비밀번호 업데이트
 
-        // 토큰 재발급 및 업데이트
-        String newAccessToken = "newAccessToken"; // 실제 토큰 재발급 로직 추가
-        String newRefreshToken = "newRefreshToken";
-        userMapper.updateAccessTokenAndRefreshToken(userId, newAccessToken, newRefreshToken);
+        // 5. UserDto를 사용해 토큰 갱신
+        UserDto userDto = userMapper.findByUserId(userId);
+        if (userDto == null) {
+            throw new RuntimeException("사용자 정보를 찾을 수 없습니다.");
+        }
+
+        // 6. 새로운 토큰 생성
+        String accessToken = jwtUtils.createAccessToken(userDto.getUser_id());
+        String refreshToken = jwtUtils.createRefreshToken(userDto.getUser_id());
+
+        // 7. 토큰 업데이트
+        userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), accessToken, refreshToken);
     }
 
 
