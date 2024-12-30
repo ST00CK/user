@@ -2,6 +2,9 @@ logging:
   level:
     root: debug
 
+server:
+  tomcat:
+    connection-timeout: 60000 # 60?? ??, ???? 20000 (20?)
 
 
 spring:
@@ -10,6 +13,10 @@ spring:
     url: ${MARIA_HOST}
     username: ${MARIA_USER}
     password: ${MARIA_PASSWORD}
+    web:
+      rest-template:
+        connect-timeout: 5000  # ?? ???? 5?
+        read-timeout: 5000     # ?? ???? 5?
 
   security:
     oauth2:
@@ -22,7 +29,7 @@ spring:
             scope: profile_nickname, account_email, profile_image,openid
             client-name: Kakao
             provider: kakao
-            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            redirect-uri: http://localhost:3000
         provider:
           kakao:
             authorization-uri: https://kauth.kakao.com/oauth/authorize
@@ -47,8 +54,6 @@ smtp:
 
 jwt:
   secret: ${JWT_SECRET_KEY}
-
-
 
 
 

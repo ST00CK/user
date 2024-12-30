@@ -13,7 +13,8 @@ import org.apache.catalina.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestTemplate;
+
 
 @Service
 @RequiredArgsConstructor
@@ -41,16 +42,8 @@ public class UserService {
     //로그아웃
     @Transactional
     public void logout(String token) {
-        // DB 업데이트 쿼리 호출
-        int updatedRows = userMapper.invalidateAccessToken(token);
 
-        // 업데이트된 행 수 로그 출력
-        System.out.println("로그아웃 처리, 업데이트된 행 수: " + updatedRows);
-
-        // 업데이트된 행이 없다면, 로그 출력
-        if (updatedRows == 0) {
-            System.out.println("해당 토큰으로 업데이트된 레코드가 없습니다. 토큰: " + token);
-        }
+        userMapper.invalidateAccessToken(token);
     }
 
     //폼로그인
@@ -147,29 +140,34 @@ public class UserService {
         userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), accessToken, refreshToken);
     }
 
-
     //소셜유저 로그인
     @Transactional
-    public Mono<String> saveSocialUser(SocialUserDto socialUserDto, UserDto userDto) {
+    public String saveSocialUser(SocialUserDto socialUserDto, UserDto userDto) {
         try {
-            //기존 사용자가인지 확인
+            // 기존 사용자가 있는지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUser_id());
 
             if (existingUser == null) {
-                //사용자가 없으면 새로 삽입
+                // 사용자가 없으면 새로 삽입
                 userMapper.socialSave(userDto); // UserDto 테이블에 저장
                 socialUserMapper.save(socialUserDto); // SocialUserDto 테이블에 저장
             } else {
-                //사용자가 있으면 토큰 정보 업데이트
+                // 사용자가 있으면 토큰 정보 업데이트
                 userMapper.updateAccessTokenAndRefreshToken(
                         userDto.getUser_id(), userDto.getAccess_token(), userDto.getRefresh_token()
                 );
             }
-            return Mono.just("success");
+            return "success";
         } catch (Exception e) {
             e.printStackTrace();
-            return Mono.error(new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e));
+            throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
+    }
+
+
+    // 기존회원인지 찾는 로직
+    public UserDto findByUserId(String user_id) {
+        return userMapper.findByUserId(user_id);  // UserDto 반환
     }
 
 

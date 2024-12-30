@@ -15,7 +15,7 @@
     </insert>
 
     <!--기존회원인지 아닌지 확인-->
-    <select id="findByUserId" parameterType="String" resultType="UserDto">
+    <select id="findByUserId" parameterType="UserDto" resultType="UserDto">
         select *
         from user
         where user_id = #{user_id}
@@ -30,8 +30,8 @@
     </update>
 
     <update id="invalidateAccessToken" parameterType="String">
-        delete
-        from user
+        update user
+        set access_token = null
         where access_token = #{access_token}
     </update>
 

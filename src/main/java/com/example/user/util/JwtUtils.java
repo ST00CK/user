@@ -1,10 +1,12 @@
 package com.example.user.util;
 
+import com.example.user.dto.UserDto;
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtUtils {
@@ -56,14 +58,43 @@ public class JwtUtils {
     }
 
     // 토큰 유효성 검사
+    public boolean validateToken(String token) {
+        try {
+            getClaims(token); // 클레임을 추출하면서 유효성을 검사
+            return !isTokenExpired(token); // 토큰이 만료되지 않았는지 확인
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // 토큰에서 사용자명 추출
+    public String getUsernameFromToken(String token) {
+        return getClaims(token).getSubject(); // 클레임에서 사용자명을 추출
+    }
+
+    // 토큰이 만료되었는지 확인
     public boolean isTokenExpired(String token) {
         Claims claims = getClaims(token);
         return claims.getExpiration().before(new Date());
     }
 
-    // 토큰에서 사용자명 추출
-    public String getUsername(String token) {
-        Claims claims = getClaims(token);
-        return claims.getSubject();
+    // 사용자 정보를 바탕으로 토큰 생성
+    public String generateToken(UserDto userDto) {
+        return createAccessToken(userDto.getUser_id()); // user_id를 기반으로 accessToken을 생성
     }
+
+    // Authorization 헤더와 요청 데이터에서 access_token 추출
+    public String extractAccessToken(String authorizationHeader, Map<String, String> tokenData) {
+        String accessToken = null;
+
+        // Authorization 헤더에서 Bearer Token 추출
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // 'Bearer ' 이후의 토큰 값 추출
+        } else if (tokenData != null && tokenData.containsKey("access_token")) {
+            accessToken = tokenData.get("access_token"); // 요청 데이터에서 access_token 추출
+        }
+
+        return accessToken;
+    }
+
 }
