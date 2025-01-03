@@ -10,6 +10,7 @@ import com.example.user.service.UserService;
 import com.example.user.util.JwtAuthenticationFilter;
 import com.example.user.util.JwtUtils;
 import com.example.user.util.OAuth2LoginFilter;
+import com.example.user.util.formjwtutil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -71,14 +73,9 @@ public class SecurityConfig {
         return new CustomUserDetailsService(userMapper, formUserMapper);
     }
 
-//    @Bean
-//    public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-//        return new JwtAuthenticationFilter(authenticationManager(), userMapper, jwtUtils);
-//    }
-
     @Bean
     public OAuth2LoginFilter oauth2LoginFilter() throws Exception {
-        return new OAuth2LoginFilter( kaKaoService, jwtUtils); // OAuth2UserService, KaKaoService, JwtUtils를 사용하여 OAuth2LoginFilter 생성
+        return new OAuth2LoginFilter( kaKaoService, jwtUtils,userService); // OAuth2UserService, KaKaoService, JwtUtils를 사용하여 OAuth2LoginFilter 생성
     }
 
     @Bean
@@ -90,7 +87,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, formjwtutil formjwtutil) throws Exception {
 
         http
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
@@ -116,13 +113,16 @@ public class SecurityConfig {
 
         // 경로별 인가 작업
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/kakao-token").authenticated()
+                .requestMatchers("/api/kakao-token","/formuser").permitAll()
                 .anyRequest().permitAll());
 
+
+        //폼로그인 필터
+        http.addFilterBefore(new JwtAuthenticationFilter(formjwtutil, authenticationManager), UsernamePasswordAuthenticationFilter.class);
+
         // OAuth2LoginFilter 필터 추가
-        http.addFilterAfter(new OAuth2LoginFilter(kaKaoService,jwtUtils), UsernamePasswordAuthenticationFilter.class);
-//        // JWT 필터 추가
-//        http.addFilterAfter(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new OAuth2LoginFilter(kaKaoService,jwtUtils,userService), UsernamePasswordAuthenticationFilter.class);
+
 
 
         // 세션 설정

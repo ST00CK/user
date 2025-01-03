@@ -7,10 +7,6 @@ import com.example.user.dto.UserDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpMethod;
-
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,7 +16,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class KaKaoService {
@@ -35,35 +33,37 @@ public class KaKaoService {
         this.restTemplate = restTemplate;
     }
 
-
     // 카카오 사용자 정보 가져오는 메소드
     public KaKaoDto getKakaoUserInfo(String accessToken, String refreshToken) {
-        System.out.println("액세스 토큰: " + accessToken);
-        System.out.println("리프레시: " + refreshToken);
-        boolean isValid = validateKakaoAccessToken(accessToken);
-        System.out.println("액세스 토큰 유효성 검사 결과: " + isValid);
+        log.info("액세스 토큰: {}", accessToken);
+        log.info("사용자 정보 가져오는 리프레시: {}", refreshToken);
 
-        if (!isValid) {
-            // 토큰이 유효하지 않으면 리프레시 토큰을 사용하여 새 액세스 토큰 발급
-            TokenResponse tokenResponse = refreshTokens(refreshToken);
-            System.out.println("새로운 액세스 토큰: " + tokenResponse.getAccessToken());
-            return fetchKakaoUserInfo(tokenResponse.getAccessToken(), tokenResponse.getRefreshToken());
+        System.out.println("getrefresh : " + refreshToken);
+
+        // 이미 액세스 토큰이 유효하면 바로 반환
+        if (validateKakaoAccessToken(accessToken)) {
+            log.info("액세스 토큰 유효성 검사 결과: true");
+            return fetchKakaoUserInfo(accessToken, refreshToken); // 액세스 토큰 유효하면 바로 사용자 정보 조회
         }
 
-        // 액세스 토큰이 유효하면 바로 사용자 정보 조회
-        return fetchKakaoUserInfo(accessToken, refreshToken);
+        // 액세스 토큰이 유효하지 않으면 리프레시 토큰으로 새 액세스 토큰 발급
+        TokenResponse tokenResponse = refreshTokens(refreshToken);
+        log.info("새로운 액세스 토큰: {}", tokenResponse.getAccessToken());
+        accessToken = tokenResponse.getAccessToken(); // 새 액세스 토큰 사용
+
+        // 액세스 토큰이 유효하면 사용자 정보 조회
+        return fetchKakaoUserInfo(accessToken, tokenResponse.getRefreshToken()); // 새로운 리프레시 토큰을 사용
     }
+
+
 
     // 카카오 사용자 정보 요청 메소드
     public KaKaoDto fetchKakaoUserInfo(String accessToken, String refreshToken) {
-
-        log.debug("Kakao Client ID: {}", kakaoConfig.getClientId());
-        log.debug("Kakao Client Secret: {}", kakaoConfig.getClientSecret());
-        log.debug("Kakao Redirect URI: {}", kakaoConfig.getRedirectUri());
-        System.out.println("카카오 사용자 정보 요청 중, 액세스 토큰: " + accessToken);
-        System.out.println("리프레시토큰떠라: " + refreshToken); // null 여부 확인
+        log.info("카카오 사용자 정보 요청 중, 액세스 토큰: {}", accessToken);
+        log.info("사용자정보 요청 리프레시: {}", refreshToken); // null 여부 확인
 
         String url = "https://kapi.kakao.com/v2/user/me";
+        System.out.println("fetchrefresh : " + refreshToken);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + accessToken); // 헤더에 액세스 토큰 추가
@@ -87,6 +87,7 @@ public class KaKaoService {
             userDto.setEmail(jsonNode.get("kakao_account").get("email").asText());
             userDto.setAccess_token(accessToken); // access_token을 UserDto에만 설정
             userDto.setRefresh_token(refreshToken); // refresh_token을 UserDto에만 설정
+            log.info("토큰: {}", refreshToken);
             userDto.setFile(jsonNode.get("properties").get("profile_image").asText());
 
             // KaKaoDto에 UserDto와 SocialUserDto 설정
@@ -94,7 +95,7 @@ public class KaKaoService {
             kaKaoDto.setSocialUserDto(socialUserDto);
             kaKaoDto.setUserDto(userDto);
 
-            System.out.println("카카오 사용자 정보: " + kaKaoDto);
+            log.info("카카오 사용자 정보: {}", kaKaoDto);
 
             return kaKaoDto;
 
@@ -104,8 +105,8 @@ public class KaKaoService {
         }
     }
 
+    // 토큰 갱신 메소드
     public TokenResponse refreshTokens(String refreshToken) {
-
         String url = "https://kauth.kakao.com/oauth/token";
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -119,8 +120,13 @@ public class KaKaoService {
 
             // 새로운 리프레시 토큰이 포함된 응답이 오지 않으면 예외 발생
             if (tokenResponse == null || tokenResponse.getAccessToken() == null || tokenResponse.getRefreshToken() == null) {
+                log.error("새로운 액세스 토큰 또는 리프레시 토큰이 없습니다. 응답: {}", tokenResponse);
                 throw new RuntimeException("새로운 액세스 토큰 및 리프레시 토큰 발급 실패");
             }
+
+            // 로그 추가
+            log.debug("새로운 액세스 토큰: {}", tokenResponse.getAccessToken());
+            log.debug("새로운 리프레시 토큰: {}", tokenResponse.getRefreshToken());
 
             return tokenResponse;
 
@@ -130,7 +136,7 @@ public class KaKaoService {
         }
     }
 
-
+    // 카카오 액세스 토큰 유효성 검사 메소드
     public boolean validateKakaoAccessToken(String accessToken) {
         String url = "https://kapi.kakao.com/v1/user/access_token_info";
 
@@ -170,13 +176,12 @@ public class KaKaoService {
         }
     }
 
-
+    // TokenResponse 클래스
     public class TokenResponse {
         private String accessToken;
         private String refreshToken;
 
-        // Getter, Setter, and other methods
-
+        // Getter, Setter
         public String getAccessToken() {
             return accessToken;
         }
@@ -193,5 +198,4 @@ public class KaKaoService {
             this.refreshToken = refreshToken;
         }
     }
-
 }

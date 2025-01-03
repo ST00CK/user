@@ -25,6 +25,8 @@ public class JwtUtils {
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_VALIDITY))
                 .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
+
+
     }
 
     // 리프레시 토큰 생성
@@ -83,18 +85,6 @@ public class JwtUtils {
         return createAccessToken(userDto.getUser_id()); // user_id를 기반으로 accessToken을 생성
     }
 
-    // Authorization 헤더와 요청 데이터에서 access_token 추출
-    public String extractAccessToken(String authorizationHeader, Map<String, String> tokenData) {
-        String accessToken = null;
 
-        // Authorization 헤더에서 Bearer Token 추출
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            accessToken = authorizationHeader.substring(7); // 'Bearer ' 이후의 토큰 값 추출
-        } else if (tokenData != null && tokenData.containsKey("access_token")) {
-            accessToken = tokenData.get("access_token"); // 요청 데이터에서 access_token 추출
-        }
-
-        return accessToken;
-    }
 
 }
