@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -23,11 +24,17 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
     private final UserService userService;
 
-
     public OAuth2LoginFilter(KaKaoService kaKaoService, JwtUtils jwtUtils, UserService userService) {
         this.kaKaoService = kaKaoService;
         this.jwtUtils = jwtUtils;
         this.userService = userService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // 필터를 특정 경로 `/api/kakao-token`에만 작동하도록 설정
+        String requestURI = request.getRequestURI();
+        return !"/api/kakao-token".equals(requestURI);
     }
 
     @Override
@@ -41,7 +48,7 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
         }
 
         // refreshToken을 쿠키에서 추출
-        String refreshToken = getRefreshTokenFromCookie(request); // 쿠키에서 가져오는 메서드 호출
+        String refreshToken = getRefreshTokenFromCookie(request);
 
         if (refreshToken == null) {
             refreshToken = request.getParameter("refreshToken"); // 쿠키에서 없을 경우, 쿼리 파라미터에서 가져옴
@@ -64,7 +71,7 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 나머지 로직은 동일
+            // 사용자 정보 저장 및 JWT 생성
             String result = userService.saveSocialUser(kaKaoDto.getSocialUserDto(), kaKaoDto.getUserDto());
             String jwtToken = jwtUtils.generateToken(kaKaoDto.getUserDto());
             response.addHeader("Authorization", "Bearer " + jwtToken);

@@ -5,34 +5,27 @@ import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.service.CustomUserDetailsService;
 import com.example.user.service.KaKaoService;
-import com.example.user.service.OAuth2UserService;
 import com.example.user.service.UserService;
 import com.example.user.util.JwtAuthenticationFilter;
 import com.example.user.util.JwtUtils;
-import com.example.user.util.OAuth2LoginFilter;
 import com.example.user.util.formjwtutil;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,17 +41,10 @@ public class SecurityConfig {
     private final FormUserMapper formUserMapper;
     private final JwtUtils jwtUtils;
     private final UserService userService;
-    private final AuthenticationConfiguration authenticationConfiguration;
     private final SocialUserMapper socialUserMapper;
     private final KaKaoService kaKaoService;
+    private final formjwtutil formjwtutil;
 
-    // AuthenticationManager 빈 등록
-    @Bean
-    public AuthenticationManager authenticationManager() throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
-
-    // AuthenticationProvider 빈 등록
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -67,67 +53,41 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    // UserDetailsService 빈 등록
     @Bean
     public UserDetailsService userDetailsService() {
         return new CustomUserDetailsService(userMapper, formUserMapper);
     }
 
     @Bean
-    public OAuth2LoginFilter oauth2LoginFilter() throws Exception {
-        return new OAuth2LoginFilter( kaKaoService, jwtUtils,userService); // OAuth2UserService, KaKaoService, JwtUtils를 사용하여 OAuth2LoginFilter 생성
-    }
-
-    @Bean
-    public OAuth2UserService oAuth2UserService() {
-        return new OAuth2UserService(socialUserMapper, jwtUtils, userMapper); // 필요한 의존성으로 OAuth2UserService 생성
-    }
-
-
-
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, formjwtutil formjwtutil) throws Exception {
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
-                    @Override
-                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
-                        CorsConfiguration corsConfiguration = new CorsConfiguration();
+                .cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
+                    CorsConfiguration corsConfiguration = new CorsConfiguration();
+                    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
+                    corsConfiguration.setAllowedMethods(Collections.singletonList("*"));
+                    corsConfiguration.setAllowCredentials(true);
+                    corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
+                    corsConfiguration.setMaxAge(3600L);
+                    corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
+                    return corsConfiguration;
+                }))
+                .csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/kakao-token", "/formuser").permitAll()
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-                        corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
-                        corsConfiguration.setAllowedMethods(Collections.singletonList("*"));
-                        corsConfiguration.setAllowCredentials(true);
-                        corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
-                        corsConfiguration.setMaxAge(3600L);
-                        corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
+        // JwtAuthenticationFilter 등록
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(formjwtutil, http.getSharedObject(org.springframework.security.authentication.AuthenticationManager.class)),
+                UsernamePasswordAuthenticationFilter.class);
 
-                        return corsConfiguration;
-                    }
-                }));
-        // csrf 비활성화
-        http.csrf(csrf -> csrf.disable());
-        // 폼로그인 비활성화
-        http.formLogin(formLogin -> formLogin.disable());
-        http.httpBasic(httpBasic -> httpBasic.disable());
-
-        // 경로별 인가 작업
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/kakao-token","/formuser").permitAll()
-                .anyRequest().permitAll());
-
-
-        //폼로그인 필터
-        http.addFilterBefore(new JwtAuthenticationFilter(formjwtutil, authenticationManager), UsernamePasswordAuthenticationFilter.class);
-
-        // OAuth2LoginFilter 필터 추가
-        http.addFilterAfter(new OAuth2LoginFilter(kaKaoService,jwtUtils,userService), UsernamePasswordAuthenticationFilter.class);
-
-
-
-        // 세션 설정
-        http.sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        // OAuth2LoginFilter 등록
+        http.addFilterBefore(
+                new com.example.user.util.OAuth2LoginFilter(kaKaoService, jwtUtils, userService),
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

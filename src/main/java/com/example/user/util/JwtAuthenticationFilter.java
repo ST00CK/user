@@ -1,29 +1,24 @@
 package com.example.user.util;
 
 import com.example.user.dto.UserDto;
-import com.example.user.service.KaKaoService;
-import com.example.user.service.UserService;
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
@@ -32,15 +27,25 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
         private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-
         // 로그인 요청을 처리하는 메서드
         @Override
         public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
+                // 특정 경로에서만 필터 작동
+                String requestURI = request.getRequestURI();
+                if (!"/formuser".equals(requestURI)) {
+                        log.info("Request URI '{}' is not /formuser. Skipping JwtAuthenticationFilter.", requestURI);
+                        return null; // 다른 필터 체인으로 진행
+                }
+
                 String userId = request.getParameter("user_id");
                 String password = request.getParameter("passwd");
 
-                log.info("유저아이디 : ",userId);
-                System.out.println("유저아이디: " + userId);
+                log.info("Attempting authentication for userId: {}", userId);
+
+                if (userId == null || password == null) {
+                        log.error("User ID or password is missing!");
+                        throw new AuthenticationServiceException("User ID or password is missing");
+                }
 
                 // 로그인 인증을 위한 AuthenticationToken 생성
                 UsernamePasswordAuthenticationToken authenticationToken =
@@ -52,14 +57,21 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
         @Override
         protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+                // 특정 경로에서만 필터 작동
+                String requestURI = request.getRequestURI();
+                if (!"/formuser".equals(requestURI)) {
+                        chain.doFilter(request, response); // 필터 체인 계속 진행
+                        return;
+                }
+
                 String userId = ((UserDto) authResult.getPrincipal()).getUser_id();
                 String accessToken = formjwtutil.createAccessToken(userId);
                 String refreshToken = formjwtutil.createRefreshToken(userId);
-                System.out.println("successfulAuthentication 호출됨");
-                System.out.println("엑세스토큰: " + accessToken);
+                log.info("successfulAuthentication 호출됨");
+                log.info("엑세스토큰: {}", accessToken);
 
-                // 사용자 권한 추가 (필요시 추가 정보와 권한을 포함시킬 수 있음)
-                ArrayList<GrantedAuthority> authorities = new ArrayList<>();
+                // 사용자 권한 추가
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
                 // 인증 객체 생성 후 SecurityContext에 설정
