@@ -12,7 +12,7 @@ RUN gradle clean build --no-daemon
 
 # 최종 이미지 설정 (필요에 따라 추가)
 FROM openjdk:17-slim
-COPY --from=build /app/build/libs/your-app.jar /app.jar
+COPY --from=build /app/build/libs/*.jar /app.jar
 
 # 애플리케이션 실행
 ENTRYPOINT ["java", "-jar", "/app.jar"]
