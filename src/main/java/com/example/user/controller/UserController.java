@@ -7,6 +7,7 @@ import com.example.user.service.UserService;
 import com.example.user.util.JwtUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.catalina.User;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -60,7 +61,7 @@ public class UserController {
 
     //폼로그인
     @PostMapping("/formuser")
-    public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto) {
+    public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
         if (SecurityContextHolder.getContext().getAuthentication() != null &&
                 SecurityContextHolder.getContext().getAuthentication().isAuthenticated() &&
@@ -68,7 +69,6 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
-
 
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
@@ -86,18 +86,27 @@ public class UserController {
 
         // 인증된 사용자 정보 설정
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                userDto.getUser_id(), null, authorities
+                userDto, null, authorities
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
+        // JWT 토큰을 쿠키에 저장
+        Cookie accessTokenCookie = new Cookie("access_token", accessToken);
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setMaxAge(3600); // 1시간
+        accessTokenCookie.setPath("/");
+        response.addCookie(accessTokenCookie);
+
         // 응답 메시지 반환
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "회원가입이 성공적으로 완료되었습니다.");
-        response.put("userId", userDto.getUser_id());
-        response.put("accessToken", accessToken);
-        response.put("refreshToken", refreshToken);
-        return ResponseEntity.ok(response);
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
+        responseMap.put("userId", userDto.getUser_id());
+        responseMap.put("accessToken", accessToken);
+        responseMap.put("refreshToken", refreshToken);
+
+        return ResponseEntity.ok(responseMap);
     }
+
 
 
 

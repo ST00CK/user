@@ -75,8 +75,8 @@ public class SecurityConfig {
                 .formLogin(formLogin -> formLogin.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/kakao-token", "/formuser").permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/api/kakao-token", "/formuser").authenticated()
+                        .anyRequest().permitAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // JwtAuthenticationFilter 등록

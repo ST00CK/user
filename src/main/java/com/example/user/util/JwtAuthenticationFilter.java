@@ -57,6 +57,14 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
         @Override
         protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+                // 인증 성공 후 사용자 정보를 로그로 출력
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null) {
+                        log.info("Authentication: {}", authentication.getPrincipal());
+                } else {
+                        log.error("Authentication is null");
+                }
+
                 // 특정 경로에서만 필터 작동
                 String requestURI = request.getRequestURI();
                 if (!"/formuser".equals(requestURI)) {
@@ -75,8 +83,9 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
                 // 인증 객체 생성 후 SecurityContext에 설정
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                        authResult.getPrincipal(), null, authorities); // authResult에서 Principal (userDto) 가져오기
+
 
                 // 응답에 JWT 토큰 추가
                 response.addHeader("Authorization", "Bearer " + accessToken);
@@ -85,4 +94,5 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                 // 필터 체인 계속 실행
                 chain.doFilter(request, response);
         }
+
 }
