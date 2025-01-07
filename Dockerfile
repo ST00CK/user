@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Gradle 빌드 실행
-RUN gradle clean build —no-daemon
+RUN gradle clean build --no-daemon
 
 # 최종 이미지 설정 (필요에 따라 추가)
 FROM openjdk:17-slim
