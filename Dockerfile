@@ -1,4 +1,4 @@
-FROM openjdk:17-alpine AS build
+FROM gradle:8.0-jdk17 AS build
 
 # 필수 도구만 설치
 RUN apk add --no-cache bash
