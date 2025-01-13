@@ -18,7 +18,7 @@ FROM openjdk:17-slim
 WORKDIR /app
 
 # JAR 파일 복사
-COPY --from=build /app/build/libs/User-0.0.1-SNAPSHOT.jar /app/app.jar
+COPY --from=build /app/build/libs/User-0.0.1-SNAPSHOT.jar /app.jar
 
 # 애플리케이션 실행
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app.jar"]
