@@ -1,5 +1,5 @@
 # 빌드 단계: OpenJDK 17 JDK를 기반으로 한 빌드 이미지
-FROM openjdk:17-jdk AS build
+FROM openjdk:17-jdk
 
 # Gradle wrapper와 소스 파일 복사
 WORKDIR /app
