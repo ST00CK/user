@@ -11,7 +11,7 @@ COPY . .
 RUN ./gradlew build --no-daemon
 
 # 경량 OpenJDK 17 이미지
-FROM openjdk:17-alpine
+FROM openjdk:17-slim
 
 # 빌드된 JAR 파일을 실행 이미지로 복사
 COPY --from=build /app/build/libs/*.jar /app/app.jar
