@@ -5,7 +5,6 @@ FROM gradle:8.0-jdk17 AS build
 WORKDIR /app
 
 # Gradle 관련 파일만 복사 (의존성 캐시 활용)
-COPY build.gradle settings.gradle gradle.properties ./
 COPY gradle ./gradle
 RUN gradle dependencies --no-daemon
 
