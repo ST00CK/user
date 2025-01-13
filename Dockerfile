@@ -11,7 +11,7 @@ COPY . .
 RUN gradle clean build --no-daemon
 
 # 최종 이미지 설정 (필요에 따라 추가)
-FROM openjdk:17-slim
+FROM openjdk:17
 COPY --from=build /app/build/libs/User-0.0.1-SNAPSHOT.jar /app.jar
 
 # 애플리케이션 실행
