@@ -17,6 +17,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserMapper userMapper;
     private final FormUserMapper formUserMapper;
 
+
     public CustomUserDetailsService(UserMapper userMapper, FormUserMapper formUserMapper) {
         this.userMapper = userMapper;
         this.formUserMapper = formUserMapper;
@@ -24,20 +25,20 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserDto userDto = userMapper.findByUserId(username);
-        if (userDto == null) {
-            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username);
-        }
+//        UserDto userDto = userMapper.findByUserId(username);
+//        if (userDto == null) {
+//            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username);
+//        }
 
         // FormUserDto에서 비밀번호 가져오기
-        FormUserDto formUserDto = formUserMapper.findByUserId(userDto.getUser_id()); // user_id를 사용
+        FormUserDto formUserDto = formUserMapper.findById(username); // user_id를 사용
         if (formUserDto == null) {
             throw new UsernameNotFoundException("폼 사용자 정보를 찾을 수 없습니다: " + username);
         }
 
         // UserDetails 객체 생성
         return new org.springframework.security.core.userdetails.User(
-                userDto.getUser_id(),
+                formUserDto.getUserId(),
                 formUserDto.getPasswd(), // FormUserDto에서 비밀번호 가져오기
                 // 권한 설정 (예: ROLE_USER)
                 List.of(() -> "ROLE_USER") // 필요한 경우 권한을 추가

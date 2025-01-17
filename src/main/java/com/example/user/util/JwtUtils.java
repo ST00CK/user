@@ -69,11 +69,6 @@ public class JwtUtils {
         }
     }
 
-    // 토큰에서 사용자명 추출
-    public String getUsernameFromToken(String token) {
-        return getClaims(token).getSubject(); // 클레임에서 사용자명을 추출
-    }
-
     // 토큰이 만료되었는지 확인
     public boolean isTokenExpired(String token) {
         Claims claims = getClaims(token);
@@ -82,7 +77,7 @@ public class JwtUtils {
 
     // 사용자 정보를 바탕으로 토큰 생성
     public String generateToken(UserDto userDto) {
-        return createAccessToken(userDto.getUser_id()); // user_id를 기반으로 accessToken을 생성
+        return createAccessToken(userDto.getUserId()); // user_id를 기반으로 accessToken을 생성
     }
 
 

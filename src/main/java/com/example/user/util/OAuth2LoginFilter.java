@@ -51,7 +51,7 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
         String refreshToken = getRefreshTokenFromCookie(request);
 
         if (refreshToken == null) {
-            refreshToken = request.getParameter("refreshToken"); // 쿠키에서 없을 경우, 쿼리 파라미터에서 가져옴
+            refreshToken = request.getParameter("refresh_token"); // 쿠키에서 없을 경우, 쿼리 파라미터에서 가져옴
         }
 
         if (accessToken == null) {
@@ -78,8 +78,8 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
 
             OAuth2User oAuth2User = new DefaultOAuth2User(
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")),
-                    Collections.singletonMap("user_id", kaKaoDto.getUserDto().getUser_id()),
-                    "user_id"
+                    Collections.singletonMap("userId", kaKaoDto.getUserDto().getUserId()),
+                    "userId"
             );
 
             OAuth2AuthenticationToken authentication = new OAuth2AuthenticationToken(

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 
 @Component
-public class formjwtutil {
+public class FormJwtUtill {
     @Value("${JWT_SECRET_KEY}")
     private String secretKey; // 환경변수나 프로퍼티에서 가져옴
 
@@ -52,35 +52,37 @@ public class formjwtutil {
         }
     }
 
-    // 토큰에서 클레임 정보 추출
-    public Claims getClaims(String token) {
+    // 토큰 유효성 검증
+    public Claims validateToken(String token) {
         try {
-            Claims claims = Jwts.parser()
+            return Jwts.parser()
                     .setSigningKey(secretKey)
                     .parseClaimsJws(token)
                     .getBody();
-            System.out.println("[DEBUG] 토큰에서 클레임 추출 완료: " + claims);
-            return claims;
         } catch (ExpiredJwtException e) {
-            System.out.println("[ERROR] 토큰 만료: " + e.getMessage());
-            throw new IllegalArgumentException("Token has expired", e);
-        } catch (Exception e) {
-            System.out.println("[ERROR] 클레임 추출 실패: " + e.getMessage());
-            throw new IllegalArgumentException("Invalid token", e);
-        }
-    }
-
-
-
-    // 사용자 정보를 바탕으로 토큰 생성
-    public String generateToken(UserDto userDto) {
-        try {
-            String token = createAccessToken(userDto.getUser_id());
-            System.out.println("[DEBUG] 사용자 정보 기반 토큰 생성 완료: " + token);
-            return token;
-        } catch (Exception e) {
-            System.out.println("[ERROR] 사용자 정보 기반 토큰 생성 실패: " + e.getMessage());
+            System.out.println("[ERROR] 토큰이 만료되었습니다: " + e.getMessage());
             throw e;
+        } catch (Exception e) {
+            System.out.println("[ERROR] 토큰 검증 실패: " + e.getMessage());
+            throw new RuntimeException("토큰 검증 실패");
         }
     }
+
+    // 새로운 토큰 발급 로직
+    public String refreshAccessToken(String refreshToken) {
+        try {
+            Claims claims = validateToken(refreshToken); // 리프레시 토큰 검증
+
+            // 검증 후 새로운 액세스 토큰 생성
+            String username = claims.getSubject();
+            return createAccessToken(username);
+        } catch (ExpiredJwtException e) {
+            throw new RuntimeException("리프레시 토큰이 만료되었습니다. 다시 로그인해야 합니다.");
+        } catch (Exception e) {
+            throw new RuntimeException("리프레시 토큰 검증 실패");
+        }
+    }
+
+
+
 }

@@ -6,14 +6,12 @@ import com.example.user.mapper.UserMapper;
 import com.example.user.service.CustomUserDetailsService;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
-import com.example.user.util.JwtAuthenticationFilter;
-import com.example.user.util.JwtUtils;
-import com.example.user.util.formjwtutil;
-import jakarta.servlet.http.HttpServletRequest;
+import com.example.user.util.*;
 import lombok.RequiredArgsConstructor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -25,7 +23,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,7 +40,18 @@ public class SecurityConfig {
     private final UserService userService;
     private final SocialUserMapper socialUserMapper;
     private final KaKaoService kaKaoService;
-    private final formjwtutil formjwtutil;
+    private final FormJwtUtill formjwtutil;
+    private final AuthenticationConfiguration authenticationConfiguration;
+//    private final AuthenticationManager authenticationManager;
+
+
+
+
+    @Bean
+    public AuthenticationManager authenticationManager() throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -59,7 +67,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
                     CorsConfiguration corsConfiguration = new CorsConfiguration();
@@ -71,22 +79,27 @@ public class SecurityConfig {
                     corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
                     return corsConfiguration;
                 }))
+                .logout(logout -> logout.disable())
                 .csrf(csrf -> csrf.disable())
                 .formLogin(formLogin -> formLogin.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/kakao-token", "/formuser").authenticated()
+                        .requestMatchers("/api/kakao-token", "/login").authenticated()
                         .anyRequest().permitAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+
+
+        // CustomRequestWrappingFilter 추가
+        http.addFilterBefore(
+                new CustomRequestWrappingFilter(), UsernamePasswordAuthenticationFilter.class);
         // JwtAuthenticationFilter 등록
         http.addFilterBefore(
-                new JwtAuthenticationFilter(formjwtutil, http.getSharedObject(org.springframework.security.authentication.AuthenticationManager.class)),
-                UsernamePasswordAuthenticationFilter.class);
+                new JwtAuthenticationFilter(formjwtutil,authenticationManager), UsernamePasswordAuthenticationFilter.class);
 
         // OAuth2LoginFilter 등록
         http.addFilterBefore(
-                new com.example.user.util.OAuth2LoginFilter(kaKaoService, jwtUtils, userService),
+                new OAuth2LoginFilter(kaKaoService, jwtUtils, userService),
                 UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -14,6 +14,6 @@ import org.apache.ibatis.type.Alias;
 
 public class SocialUserDto {
 
-    private String user_id;
-    private String provider_type;
+    private String userId;
+    private String providerType;
 }

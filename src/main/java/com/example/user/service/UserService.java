@@ -9,11 +9,9 @@ import com.example.user.mapper.UserMapper;
 import com.example.user.util.JwtUtils;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 
 @Service
@@ -38,6 +36,16 @@ public class UserService {
         emailService.sendPasswordFindEmail(email, authCode);
     }
 
+    //폼유저 찾기
+    public FormUserDto getUserById(String userId) {
+        return formUserMapper.findById(userId);
+    }
+
+    //유저테이블에서 유저 찾기
+    public UserDto findByUserId(String userId) {
+        return userMapper.findByUserId(userId);
+    }
+
 
     //로그아웃
     @Transactional
@@ -46,12 +54,12 @@ public class UserService {
         userMapper.invalidateAccessToken(token);
     }
 
-    //폼로그인
+    //폼회원가입
     @Transactional
     public void saveFormUser(FormUserDto formUserDto, UserDto userDto) {
         try {
             //기존 사용자가인지 확인
-            UserDto existingUser = userMapper.findByUserId(userDto.getUser_id());
+            UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
             if (existingUser == null) {
                 //비밀번호 암호화
                 String encodedPassword = bCryptPasswordEncoder.encode(formUserDto.getPasswd());
@@ -61,12 +69,18 @@ public class UserService {
                 String authCode = emailService.generateAuthCode();
                 sendAuthCodeEmail(userDto.getEmail(), authCode);
 
+//                // userDto의 user_id를 formUserDto에 설정
+//                formUserDto.setUser_id(userDto.getUser_id());
+
+                // user_id가 제대로 설정되었는지 확인
+                System.out.println("떠라라라" + formUserDto.getUserId()); // user_id 확인
+
                 //db에 저장
                 userMapper.save(userDto); // user테이블에 삽입
                 formUserMapper.save(formUserDto); //formuser테이블에 삽입
 
                 //토큰을 db에 업데이트
-                userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), userDto.getAccess_token(), userDto.getRefresh_token());
+                userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), userDto.getAccessToken(), userDto.getRefreshToken());
 
             } else {
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
@@ -107,7 +121,7 @@ public class UserService {
     @Transactional
     public void changePassword(String userId, String oldPassword, String newPassword) {
         // 1. 폼 유저 확인 (비밀번호 검증)
-        FormUserDto formUserDto = formUserMapper.findByUserId(userId);
+        FormUserDto formUserDto = formUserMapper.findById(userId);
         if (formUserDto == null) {
             throw new RuntimeException("일반 로그인 사용자가 아닙니다.");
         }
@@ -133,11 +147,11 @@ public class UserService {
         }
 
         // 6. 새로운 토큰 생성
-        String accessToken = jwtUtils.createAccessToken(userDto.getUser_id());
-        String refreshToken = jwtUtils.createRefreshToken(userDto.getUser_id());
+        String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
+        String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
 
         // 7. 토큰 업데이트
-        userMapper.updateAccessTokenAndRefreshToken(userDto.getUser_id(), accessToken, refreshToken);
+        userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
     }
 
     //소셜유저 로그인
@@ -145,7 +159,7 @@ public class UserService {
     public String saveSocialUser(SocialUserDto socialUserDto, UserDto userDto) {
         try {
             // 기존 사용자가 있는지 확인
-            UserDto existingUser = userMapper.findByUserId(userDto.getUser_id());
+            UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
 
             if (existingUser == null) {
                 // 사용자가 없으면 새로 삽입
@@ -154,7 +168,7 @@ public class UserService {
             } else {
                 // 사용자가 있으면 토큰 정보 업데이트
                 userMapper.updateAccessTokenAndRefreshToken(
-                        userDto.getUser_id(), userDto.getAccess_token(), userDto.getRefresh_token()
+                        userDto.getUserId(), userDto.getAccessToken(), userDto.getRefreshToken()
                 );
             }
             return "success";
@@ -162,12 +176,6 @@ public class UserService {
             e.printStackTrace();
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
-    }
-
-
-    // 기존회원인지 찾는 로직
-    public UserDto findByUserId(String user_id) {
-        return userMapper.findByUserId(user_id);  // UserDto 반환
     }
 
 

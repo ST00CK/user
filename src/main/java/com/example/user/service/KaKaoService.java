@@ -77,16 +77,16 @@ public class KaKaoService {
 
             // SocialUserDto 설정
             SocialUserDto socialUserDto = new SocialUserDto();
-            socialUserDto.setUser_id(jsonNode.get("id").asText());
-            socialUserDto.setProvider_type("KAKAO");
+            socialUserDto.setUserId(jsonNode.get("id").asText());
+            socialUserDto.setProviderType("KAKAO");
 
             // UserDto 설정
             UserDto userDto = new UserDto();
-            userDto.setUser_id(jsonNode.get("id").asText());
+            userDto.setUserId(jsonNode.get("id").asText());
             userDto.setName(jsonNode.get("properties").get("nickname").asText());
             userDto.setEmail(jsonNode.get("kakao_account").get("email").asText());
-            userDto.setAccess_token(accessToken); // access_token을 UserDto에만 설정
-            userDto.setRefresh_token(refreshToken); // refresh_token을 UserDto에만 설정
+            userDto.setAccessToken(accessToken); // access_token을 UserDto에만 설정
+            userDto.setRefreshToken(refreshToken); // refresh_token을 UserDto에만 설정
             log.info("토큰: {}", refreshToken);
             userDto.setFile(jsonNode.get("properties").get("profile_image").asText());
 

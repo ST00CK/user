@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 public class OAuth2UserService {
 
     private final SocialUserMapper socialUserMapper;
-    private final JwtUtils jwtUtils;
     private final UserMapper userMapper;
 
     // OAuth2 로그인 성공 후 처리

@@ -1,26 +1,28 @@
 package com.example.user.controller;
 
 import com.example.user.dto.*;
+import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
+import com.example.user.util.FormJwtUtill;
 import com.example.user.util.JwtUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -29,28 +31,31 @@ import java.util.*;
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@Tag(name = "User API", description = "사용자 관리 API")
 public class UserController {
     private final UserMapper userMapper;
     private final UserService userService;
     private final KaKaoService kaKaoService;
     private final JwtUtils jwtUtils; // JwtUtils를 주입받음
+    private final FormUserMapper formUserMapper;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final FormJwtUtill formJwtUtill;
 
-    // 사용자 ID로 UserDto 객체를 가져오는 메소드
-    public UserDto findUserById(String userId) {
-        return userMapper.findByUserId(userId);
-    }
-
+    @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
+    //로그아웃
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(@RequestHeader(value = "Authorization", required = false) String token) {
-        if (token == null || !token.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "유효하지 않은 Authorization 헤더입니다."));
+    public ResponseEntity<Map<String, String>> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "유효하지 않은 Authorization 헤더입니다."));
         }
 
-        // 토큰에서 Bearer 제거
-        token = token.substring(7);
+        String token = authorizationHeader.substring(7); // Bearer 제거
 
         try {
-            // 토큰 기반 로그아웃 처리
             userService.logout(token);
             return ResponseEntity.ok(Map.of("message", "로그아웃이 성공적으로 완료되었습니다."));
         } catch (Exception e) {
@@ -59,7 +64,12 @@ public class UserController {
     }
 
 
-    //폼로그인
+    @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "회원가입 성공"),
+            @ApiResponse(responseCode = "403", description = "이미 로그인된 사용자")
+    })
+    //폼 회원가입
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
@@ -77,8 +87,8 @@ public class UserController {
         userService.saveFormUser(formUserDto, userDto);
 
         // Access Token과 Refresh Token 생성
-        String accessToken = jwtUtils.createAccessToken(userDto.getUser_id());
-        String refreshToken = jwtUtils.createRefreshToken(userDto.getUser_id());
+        String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
+        String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
 
         // 사용자 권한 추가
         List<GrantedAuthority> authorities = new ArrayList<>();
@@ -100,7 +110,7 @@ public class UserController {
         // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();
         responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
-        responseMap.put("userId", userDto.getUser_id());
+        responseMap.put("userId", userDto.getUserId());
         responseMap.put("accessToken", accessToken);
         responseMap.put("refreshToken", refreshToken);
 
@@ -108,11 +118,106 @@ public class UserController {
     }
 
 
+    @Operation(summary = "폼 로그인", description = "사용자가 아이디와 비밀번호를 통해 로그인합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호 오류")
+    })
+    //폼로그인
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginDto loginDto) {
+        String userId = loginDto.getUserId();
+        String passwd = loginDto.getPasswd();  // 로그인 요청에서 전달된 패스워드
+
+        // 사용자 정보 조회
+        LoginDto user = formUserMapper.findLoginUser(userId);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "사용자 정보가 일치하지 않습니다."));
+        }
+
+        // 암호화된 패스워드와 비교
+        if (!bCryptPasswordEncoder.matches(passwd, user.getPasswd())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "비밀번호가 일치하지 않습니다."));
+
+        }
+        System.out.println("userid" + userId);
+        System.out.println("passwd" + passwd);
+        System.out.println("getpasswd" + user.getPasswd());
+        System.out.println("user" + user);
+
+        // 응답 메시지 생성
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put("message", "로그인이 성공적으로 완료되었습니다.");
+        responseMap.put("userId", userId);
+
+        return ResponseEntity.ok(responseMap);
+    }
+
+    @Operation(summary = "폼 유저 액세스 토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "액세스 토큰 갱신 성공"),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, String>> refreshAccessToken(@CookieValue("Refresh-Token") String refreshToken) {
+        try {
+            // 리프레시 토큰을 검증하고 새로운 액세스 토큰을 발급
+            String newAccessToken = formJwtUtill.refreshAccessToken(refreshToken);
+
+            // 새로운 액세스 토큰을 응답으로 반환
+            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
+        } catch (RuntimeException e) {
+            // 토큰 검증 실패 시 에러 메시지 반환
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "사용자 ID로 폼로그인 사용자 정보 조회", description = "사용자 ID를 사용하여 사용자 정보를 가져옵니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사용자 정보 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자 정보가 없습니다.")
+    })
+    @GetMapping("/find")
+    public ResponseEntity<FormUserDto> getUserById(@RequestParam String userId) {
+        FormUserDto formUserDto = userService.getUserById(userId);
+
+        if (formUserDto == null) {
+            return ResponseEntity.status(404).body(null); // 사용자 미존재 시 404 반환
+        }
+
+        return ResponseEntity.ok(formUserDto); // 사용자 존재 시 200 OK 반환
+    }
 
 
+    @Operation(summary = "사용자 정보 조회", description = "사용자 ID를 통해 사용자 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사용자 정보 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자가 존재하지 않음")
+    })
+    @GetMapping("/find/user")
+    public ResponseEntity<UserDto> findByUserId(@RequestParam String userId) {
+        UserDto userDto = userService.findByUserId(userId);
+
+        if (userDto == null) {
+            return ResponseEntity.status(404).body(null); // 사용자 미존재 시 404 반환
+        }
+
+        return ResponseEntity.ok(userDto); // 사용자 존재 시 200 OK 반환
+    }
+
+
+    @Operation(summary = "비밀번호 찾기", description = "사용자가 ID, 이메일, 인증코드, 새 비밀번호를 사용해 비밀번호를 재설정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
     //비밀번호 찾기
     @PostMapping("find/password")
     public ResponseEntity<String> findPassword(@RequestBody findPasswordRequestDto findPasswordRequestDto) {
+
         try {
             userService.findPassword(
                     findPasswordRequestDto.getUserId(),
@@ -126,6 +231,11 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "비밀번호 변경", description = "로그인 상태에서 기존 비밀번호를 새 비밀번호로 변경합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
     //로그인한 상태에서 비밀번호 변경
     @PostMapping("change/password")
     public ResponseEntity<String> changePassword(@RequestBody changePasswordRequestDto changePasswordRequestDto) {
@@ -149,7 +259,11 @@ public class UserController {
         }
     }
 
-
+    @Operation(summary = "카카오 로그인", description = "카카오 계정을 통해 로그인합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
     //소셜로그인
     @PostMapping("/api/kakao-token")
     public ResponseEntity<Map<String, String>> getAccessToken(

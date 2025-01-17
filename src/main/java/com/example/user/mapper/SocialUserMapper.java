@@ -10,9 +10,9 @@ public interface SocialUserMapper {
 
     void save(SocialUserDto socialuserdto);
 
-    SocialUserDto findByUserId(String user_id);
+    SocialUserDto findByUserId(String userId);
 
-    // 소셜 로그인 유저가 존재하는지 확인하는 메서드
 
-    boolean isSocialUser(String user_id);
+
+
 }

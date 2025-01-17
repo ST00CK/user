@@ -12,10 +12,10 @@ public interface UserMapper {
 
     void socialSave(UserDto userDto);
 
-    UserDto findByUserId(String user_id);
+    UserDto findByUserId(String userId);
 
-    void updateAccessTokenAndRefreshToken(String user_id, String access_token, String refresh_token);
+    void updateAccessTokenAndRefreshToken(String userId, String accessToken, String refreshToken);
 
-    void invalidateAccessToken(String access_token);
+    void invalidateAccessToken(String accessToken);
 
 }

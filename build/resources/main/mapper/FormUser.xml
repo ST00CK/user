@@ -5,21 +5,32 @@
     <!--    폼로그인 회원가입-->
     <insert id="save" parameterType="FormUserDto" keyProperty="user_id">
         insert into form_user (user_id, passwd)
-        values (#{user_id}, #{passwd})
+        values (#{userId}, #{passwd})
     </insert>
 
+
     <!--    유저 찾기-->
-    <select id="findByUserId" parameterType="String" resultType="FormUserDto">
-        select *
-        from form_user
-        where user_id = #{user_id}
+    <!--    <resultMap id="FormUserDto" type="FormUserDto">-->
+    <!--        <result property="user_id" column="user_id" />-->
+    <!--    </resultMap>-->
+    <select id="findById" parameterType="FormUserDto" resultType="FormUserDto">
+        SELECT *
+        FROM form_user
+        WHERE user_id = #{userId}
+    </select>
+
+
+    <select id="findLoginUser" parameterType="LoginDto" resultType="LoginDto">
+        SELECT user_id, passwd
+        FROM form_user
+        WHERE user_id = #{userId}
     </select>
 
     <!--    비밀변호 변경-->
     <update id="findPassword" parameterType="map">
         update form_user
         set passwd = #{passwd}
-        where user_id = #{user_id}
+        where user_id = #{userId}
     </update>
 
 
