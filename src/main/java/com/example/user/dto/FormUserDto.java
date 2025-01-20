@@ -11,9 +11,8 @@ import org.apache.ibatis.type.Alias;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class FormUserDto {
 
-    private String user_id;
+    private String userId;
     private String passwd;
 }

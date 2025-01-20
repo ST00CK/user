@@ -4,35 +4,35 @@
 
 
     <!--    폼로그인-->
-    <insert id="save" parameterType="UserDto" keyProperty="user_id">
+    <insert id="save" parameterType="UserDto" keyProperty="userId">
         insert into user (user_id, name, email, access_token, refresh_token, file)
-        values (#{user_id}, #{name}, #{email}, #{access_token}, #{refresh_token}, #{file})
+        values (#{userId}, #{name}, #{email}, #{accessToken}, #{refreshToken}, #{file})
     </insert>
     <!--    소셜로그인-->
-    <insert id="socialSave" parameterType="UserDto" keyProperty="user_id">
+    <insert id="socialSave" parameterType="UserDto" keyProperty="userId">
         insert into user (user_id, name, email, access_token, refresh_token, file)
-        values (#{user_id}, #{name}, #{email}, #{access_token}, #{refresh_token}, #{file})
+        values (#{userId}, #{name}, #{email}, #{accessToken}, #{refreshToken}, #{file})
     </insert>
 
-    <!--기존회원인지 아닌지 확인-->
-    <select id="findByUserId" parameterType="String" resultType="UserDto">
-        select *
+
+    <select id="findByUserId" parameterType="UserDto" resultType="UserDto">
+        select user_id, name, email, file
         from user
-        where user_id = #{user_id}
+        where user_id = #{userId}
     </select>
 
     <!--    토큰 업데이트-->
     <update id="updateAccessTokenAndRefreshToken" parameterType="map">
         update user
-        set access_token  = #{access_token},
-            refresh_token = #{refresh_token}
-        where user_id = #{user_id}
+        set access_token  = #{accessToken},
+            refresh_token = #{refreshToken}
+        where user_id = #{userId}
     </update>
 
     <update id="invalidateAccessToken" parameterType="String">
-        delete
-        from user
-        where access_token = #{access_token}
+        update user
+        set access_token = null
+        where access_token = #{accessToken}
     </update>
 
 

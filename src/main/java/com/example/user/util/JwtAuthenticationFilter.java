@@ -1,79 +1,123 @@
 package com.example.user.util;
 
-import com.example.user.dto.UserDto;
-import com.example.user.mapper.FormUserMapper;
-import com.example.user.mapper.UserMapper;
+import com.example.user.dto.LoginDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
+    private final FormJwtUtill formjwtutil;  // 클래스명 수정
     private final AuthenticationManager authenticationManager;
-    private final UserMapper userMapper;
-    private final FormUserMapper formUserMapper;
-    private final JwtUtils jwtUtils; // JwtUtils 주입
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+
+
+    // 로그인 요청을 처리하는 메서드
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-        // 사용자의 로그인 정보 추출
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            // CustomHttpServletRequestWrapper 사용
+            CustomHttpServletRequestWrapper wrappedRequest = new CustomHttpServletRequestWrapper(request);
+            String requestBody = wrappedRequest.getBody(); // 요청 본문 캐싱된 값 읽기
 
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(username, password);
+            // JSON 파싱 후 인증 처리
+            LoginDto loginDto = new ObjectMapper().readValue(requestBody, LoginDto.class);
+            String userId = loginDto.getUserId();
+            String passwd = loginDto.getPasswd();
 
-        return authenticationManager.authenticate(authenticationToken);
-    }
+            if (userId == null || passwd == null) {
+                throw new AuthenticationServiceException("User ID or password is missing");
+            }
+            log.info("AuthenticationManager: {}", authenticationManager);
+            // 인증 토큰 생성 및 반환
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new UsernamePasswordAuthenticationToken(userId, passwd);
 
-    @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
-                                            FilterChain chain, Authentication authResult) throws IOException, ServletException {
-        String username = authResult.getName();
-
-        // 사용자 정보 가져오기
-        UserDto user = userMapper.findByUserId(username);
-
-        // 사용자 활성 상태를 확인하는 로직 추가 (예: email로 활성화 여부를 판단)
-        if (user == null || user.getEmail() == null || user.getEmail().isEmpty()) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "사용자 계정이 비활성화되었습니다.");
-            return;
+            return authenticationManager.authenticate(authenticationToken);
+        } catch (IOException e) {
+            throw new AuthenticationServiceException("Unable to read request body", e);
         }
-
-        // JwtUtils를 사용하여 엑세스 토큰과 리프레시 토큰 생성
-        String accessToken = jwtUtils.createAccessToken(username);
-        String refreshToken = jwtUtils.createRefreshToken(username);
-
-        // 토큰을 DB에 업데이트
-        userMapper.updateAccessTokenAndRefreshToken(username, accessToken, refreshToken);
-
-        // 토큰을 응답 헤더에 추가
-        response.addHeader("Authorization", "Bearer " + accessToken);
-        response.addHeader("Refresh-Token", refreshToken);
     }
 
-    // 로그아웃 시 호출되는 메서드 추가
-    public void handleLogout(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // 로그아웃 시 SecurityContext에서 인증 정보 제거
-        SecurityContextHolder.clearContext();
 
-        // JWT 토큰을 응답에서 삭제 (옵션)
-        response.setHeader("Authorization", null); // JWT 토큰을 삭제
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        try {
 
-        // 로그아웃 성공 응답
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.getWriter().write("Logout successful");
+            SecurityContextHolder.getContext().setAuthentication(authResult);
+            // 인증 후 인증 정보를 SecurityContext에 설정
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null) {
+                log.info("Authentication: {}", authentication.getPrincipal());
+            } else {
+                log.error("Authentication is null");
+            }
 
+            String username = ((User) authResult.getPrincipal()).getUsername();
+            log.info("Generating JWT tokens for user: {}", username);
+
+            String accessToken = formjwtutil.createAccessToken(username);
+            String refreshToken = formjwtutil.createRefreshToken(username);
+
+            // 사용자 권한 추가
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+            // 인증 객체 생성 후 SecurityContext에 설정
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    authResult.getPrincipal(), null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            log.debug("Authentication token with authorities set in SecurityContext");
+
+            // JWT 토큰을 응답 헤더에 추가
+            response.addHeader("Authorization", "Bearer " + accessToken);
+            log.debug("JWT tokens added to response headers.");
+
+            // 리프레시 토큰을 HttpOnly 쿠키에 추가
+            Cookie refreshCookie = new Cookie("Refresh-Token", refreshToken);
+            refreshCookie.setHttpOnly(true);  // JavaScript에서 접근 불가
+            refreshCookie.setSecure(true);    // HTTPS에서만 전송
+            refreshCookie.setPath("/");      // 쿠키 유효 경로 설정
+            refreshCookie.setMaxAge(60 * 60 * 24 * 7); // 쿠키 만료 기간 설정 (7일)
+            response.addCookie(refreshCookie);
+
+            log.debug("JWT refresh token added to response cookie.");
+
+
+            // 필터 체인 진행 전에 예외를 처리하고 종료
+            try {
+                // 필터 체인 계속 진행
+                CustomHttpServletRequestWrapper wrappedRequest = new CustomHttpServletRequestWrapper(request);
+                chain.doFilter(wrappedRequest, response); // wrappedRequest 사용
+                log.debug("Filter chain continued with wrapped request.");
+            } catch (Exception e) {
+                log.error("Error during filter chain execution: {}", e.getMessage(), e);
+                throw e;
+            }
+        } catch (Exception e) {
+            log.error("Error during successful authentication: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 }
