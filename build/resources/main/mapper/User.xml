@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.user.mapper.UserMapper">
+
+
+    <!--    폼로그인-->
+    <insert id="save" parameterType="UserDto" keyProperty="userId">
+        insert into user (user_id, name, email, access_token, refresh_token, file)
+        values (#{userId}, #{name}, #{email}, #{accessToken}, #{refreshToken}, #{file})
+    </insert>
+    <!--    소셜로그인-->
+    <insert id="socialSave" parameterType="UserDto" keyProperty="userId">
+        insert into user (user_id, name, email, access_token, refresh_token, file)
+        values (#{userId}, #{name}, #{email}, #{accessToken}, #{refreshToken}, #{file})
+    </insert>
+
+
+    <select id="findByUserId" parameterType="UserDto" resultType="UserDto">
+        select user_id, name, email, file
+        from user
+        where user_id = #{userId}
+    </select>
+
+    <!--    토큰 업데이트-->
+    <update id="updateAccessTokenAndRefreshToken" parameterType="map">
+        update user
+        set access_token  = #{accessToken},
+            refresh_token = #{refreshToken}
+        where user_id = #{userId}
+    </update>
+
+    <update id="invalidateAccessToken" parameterType="String">
+        update user
+        set access_token = null
+        where access_token = #{accessToken}
+    </update>
+
+
+</mapper>

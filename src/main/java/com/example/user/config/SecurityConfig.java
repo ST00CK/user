@@ -20,6 +20,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -100,7 +101,7 @@ public class SecurityConfig {
         // OAuth2LoginFilter 등록
         http.addFilterBefore(
                 new OAuth2LoginFilter(kaKaoService, jwtUtils, userService),
-                UsernamePasswordAuthenticationFilter.class);
+                OAuth2LoginAuthenticationFilter.class);
 
         return http.build();
     }

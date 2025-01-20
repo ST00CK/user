@@ -1,0 +1,64 @@
+#logging:
+#  level:
+#    root: debug
+
+server:
+  tomcat:
+    connection-timeout: 80000 # 60?? ??, ???? 20000 (20?)
+
+
+spring:
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: ${MARIA_HOST}
+    username: ${MARIA_USER}
+    password: ${MARIA_PASSWORD}
+    web:
+      rest-template:
+        connect-timeout: 5000  # ?? ???? 5?
+        read-timeout: 5000     # ?? ???? 5?
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            authorization-grant-type: authorization_code
+            client-id: a800673bed60dbdb9897f7c7f046f7ef
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            scope: profile_nickname, account_email, profile_image,openid
+            client-name: Kakao
+            provider: kakao
+            redirect-uri: http://localhost:3000
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+  type-aliases-package: com.example.user.dto
+  mapper-locations: classpath:mapper/*.xml
+
+smtp:
+  host: ${SMTP_HOST}
+  port: ${SMTP_PORT}
+  username: ${SMTP_USERNAME}
+  password: ${SMTP_PASSWORD}
+  from: ${SMTP_FROM}
+  tls: ${SMTP_TLS}
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
+
+springdoc:
+  api-docs:
+    path: /api-docs    # OpenAPI 문서 기본 경로 (기본값: /v3/api-docs)
+  swagger-ui:
+    path: /swagger-ui  # Swagger UI 기본 경로 (기본값: /swagger-ui.html)
+    operationsSorter: method   # 메서드 순서 정렬
+    display-request-duration: true # 요청 소요 시간 표시
