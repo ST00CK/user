@@ -38,7 +38,7 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException {
         String authorizationHeader = request.getHeader("Authorization");
 
         // Authorization 헤더에서 Bearer 토큰 추출
