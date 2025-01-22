@@ -16,7 +16,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,6 +174,8 @@ public class KaKaoService {
             throw new RuntimeException("토큰 검증 실패", e);
         }
     }
+
+
 
     // TokenResponse 클래스
     public class TokenResponse {

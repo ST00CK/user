@@ -41,7 +41,7 @@ public class SecurityConfig {
     private final UserService userService;
     private final SocialUserMapper socialUserMapper;
     private final KaKaoService kaKaoService;
-    private final FormJwtUtill formjwtutil;
+    private final FormJwtUtils formJwtUtils;
     private final AuthenticationConfiguration authenticationConfiguration;
 
 
@@ -109,7 +109,7 @@ public class SecurityConfig {
                 new CustomRequestWrappingFilter(), UsernamePasswordAuthenticationFilter.class);
         // JwtAuthenticationFilter 등록
         http.addFilterBefore(
-                new JwtAuthenticationFilter(formjwtutil,authenticationManager), UsernamePasswordAuthenticationFilter.class);
+                new JwtAuthenticationFilter(formJwtUtils,authenticationManager), UsernamePasswordAuthenticationFilter.class);
 
         // OAuth2LoginFilter 등록
         http.addFilterBefore(

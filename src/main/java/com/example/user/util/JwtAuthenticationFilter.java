@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
-    private final FormJwtUtill formjwtutil;  // 클래스명 수정
+    private final FormJwtUtils formJwtUtils;  // 클래스명 수정
     private final AuthenticationManager authenticationManager;
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
@@ -77,8 +77,8 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             String username = ((User) authResult.getPrincipal()).getUsername();
             log.info("Generating JWT tokens for user: {}", username);
 
-            String accessToken = formjwtutil.createAccessToken(username);
-            String refreshToken = formjwtutil.createRefreshToken(username);
+            String accessToken = formJwtUtils.createAccessToken(username);
+            String refreshToken = formJwtUtils.createRefreshToken(username);
 
             // 사용자 권한 추가
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
