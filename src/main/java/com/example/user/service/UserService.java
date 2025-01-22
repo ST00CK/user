@@ -63,7 +63,15 @@ public class UserService {
             // 기존 사용자인지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
             if (existingUser == null) {
-                // 비밀번호 암호화, 인증 코드 생성 등 이전 로직...
+                // 1. 비밀번호 암호화
+                String encodedPassword = bCryptPasswordEncoder.encode(formUserDto.getPasswd());
+                formUserDto.setPasswd(encodedPassword);
+
+                // 2. 인증 코드 생성 및 이메일 전송
+                String authCode = emailService.generateAuthCode();
+                sendAuthCodeEmail(userDto.getEmail(), authCode);
+
+
 
                 // 3. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
@@ -72,8 +80,8 @@ public class UserService {
                 userDto.setRefreshToken(refreshToken);
 
                 // 4. 사용자 정보 저장
-                userMapper.save(userDto);
-                formUserMapper.save(formUserDto);
+                userMapper.save(userDto); // user 테이블에 삽입
+                formUserMapper.save(formUserDto); // formuser 테이블에 삽입
 
                 // 5. 토큰을 DB에 저장
                 userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
@@ -85,9 +93,11 @@ public class UserService {
                 accessTokenCookie.setPath("/");
                 response.addCookie(accessTokenCookie);
             } else {
+                // 기존 사용자 예외 처리
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
             }
         } catch (Exception e) {
+            // 예외 처리
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
     }
