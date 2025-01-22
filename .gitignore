@@ -12,7 +12,8 @@
 .idea/**
 User.iml
 .gitattributes
-
+.gradle
+build
 
 # User-specific stuff
 .idea/**/workspace.xml
