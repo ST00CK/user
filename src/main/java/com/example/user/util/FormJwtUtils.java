@@ -1,22 +1,31 @@
 package com.example.user.util;
 
-import com.example.user.dto.UserDto;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
+import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
-public class FormJwtUtill {
+public class FormJwtUtils {
+
     @Value("${JWT_SECRET_KEY}")
-    private String secretKey; // 환경변수나 프로퍼티에서 가져옴
+    private String secretKeyString; // 기존에 환경변수나 프로퍼티에서 가져오는 문자열 키
+
+    private SecretKey secretKey; // SecretKey 객체
 
     private static final long ACCESS_TOKEN_VALIDITY = 1000 * 60 * 60; // 1시간
     private static final long REFRESH_TOKEN_VALIDITY = 1000 * 60 * 60 * 24 * 7; // 7일
+
+    @PostConstruct
+    public void init() {
+        this.secretKey = Keys.hmacShaKeyFor(secretKeyString.getBytes());
+    }
 
     // 엑세스 토큰 생성
     public String createAccessToken(String username) {
@@ -25,7 +34,7 @@ public class FormJwtUtill {
                     .setSubject(username)
                     .setIssuedAt(new Date())
                     .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_VALIDITY))
-                    .signWith(SignatureAlgorithm.HS256, secretKey)
+                    .signWith(secretKey, SignatureAlgorithm.HS256) // SecretKey 사용
                     .compact();
             System.out.println("[DEBUG] Access Token 생성 완료: " + token);
             return token;
@@ -42,7 +51,7 @@ public class FormJwtUtill {
                     .setSubject(username)
                     .setIssuedAt(new Date())
                     .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY))
-                    .signWith(SignatureAlgorithm.HS256, secretKey)
+                    .signWith(secretKey, SignatureAlgorithm.HS256) // SecretKey 사용
                     .compact();
             System.out.println("[DEBUG] Refresh Token 생성 완료: " + token);
             return token;
@@ -55,8 +64,9 @@ public class FormJwtUtill {
     // 토큰 유효성 검증
     public Claims validateToken(String token) {
         try {
-            return Jwts.parser()
-                    .setSigningKey(secretKey)
+            return Jwts.parserBuilder()
+                    .setSigningKey(secretKey) // SecretKey 사용
+                    .build()
                     .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException e) {
@@ -82,6 +92,4 @@ public class FormJwtUtill {
             throw new RuntimeException("리프레시 토큰 검증 실패");
         }
     }
-
-
 }

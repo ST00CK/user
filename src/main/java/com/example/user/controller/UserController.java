@@ -5,7 +5,7 @@ import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
-import com.example.user.util.FormJwtUtill;
+import com.example.user.util.FormJwtUtils;
 import com.example.user.util.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -18,9 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +36,8 @@ public class UserController {
     private final JwtUtils jwtUtils; // JwtUtils를 주입받음
     private final FormUserMapper formUserMapper;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
-    private final FormJwtUtill formJwtUtill;
+    private final FormJwtUtils formJwtUtils;
+
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
     @ApiResponses(value = {
@@ -143,7 +141,7 @@ public class UserController {
     public ResponseEntity<Map<String, String>> refreshAccessToken(@CookieValue("Refresh-Token") String refreshToken) {
         try {
             // 리프레시 토큰을 검증하고 새로운 액세스 토큰을 발급
-            String newAccessToken = formJwtUtill.refreshAccessToken(refreshToken);
+            String newAccessToken = formJwtUtils.refreshAccessToken(refreshToken);
 
             // 새로운 액세스 토큰을 응답으로 반환
             return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
