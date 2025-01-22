@@ -3,6 +3,9 @@
 #    root: debug
 
 server:
+  tomcat:
+    connection-timeout: 80000 # 60?? ??, ???? 20000 (20?)
+
 
 spring:
   datasource:

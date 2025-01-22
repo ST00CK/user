@@ -80,13 +80,14 @@ public class UserController {
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
 
+        // 클라이언트 요청에서 필요한 정보만 추출
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
 
-        // 사용자 정보 저장
+        // 사용자 정보 저장 (여기서 userDto는 클라이언트가 보낸 accessToken/refreshToken 없이 처리)
         userService.saveFormUser(formUserDto, userDto);
 
-        // Access Token과 Refresh Token 생성
+        // 서버에서 Access Token과 Refresh Token 생성
         String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
         String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
 
@@ -107,7 +108,7 @@ public class UserController {
         accessTokenCookie.setPath("/");
         response.addCookie(accessTokenCookie);
 
-        // 응답 메시지 반환
+        // 응답 메시지 반환 (토큰 포함)
         Map<String, String> responseMap = new HashMap<>();
         responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
         responseMap.put("userId", userDto.getUserId());
@@ -116,6 +117,7 @@ public class UserController {
 
         return ResponseEntity.ok(responseMap);
     }
+
 
 
     @Operation(summary = "폼 로그인", description = "사용자가 아이디와 비밀번호를 통해 로그인합니다.")
