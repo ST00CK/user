@@ -12,7 +12,7 @@
 .idea/**
 User.iml
 .gitattributes
-.gradle
+.gradle/**
 build
 
 # User-specific stuff
