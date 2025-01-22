@@ -9,7 +9,7 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 .build/
-.idea
+.idea/**
 User.iml
 .gitattributes
 # User-specific stuff
