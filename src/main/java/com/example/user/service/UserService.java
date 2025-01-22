@@ -8,6 +8,8 @@ import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.util.JwtUtils;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -56,7 +58,7 @@ public class UserService {
 
     //폼회원가입
     @Transactional
-    public void saveFormUser(FormUserDto formUserDto, UserDto userDto) {
+    public void saveFormUser(FormUserDto formUserDto, UserDto userDto, HttpServletResponse response) {
         try {
             // 기존 사용자인지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
@@ -69,15 +71,13 @@ public class UserService {
                 String authCode = emailService.generateAuthCode();
                 sendAuthCodeEmail(userDto.getEmail(), authCode);
 
+
+
                 // 3. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
                 String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
-                userDto.setAccessToken(accessToken); // 생성된 토큰을 userDto에 설정
+                userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(refreshToken);
-
-                // 디버깅용 출력 (옵션)
-                System.out.println("Access Token: " + accessToken);
-                System.out.println("Refresh Token: " + refreshToken);
 
                 // 4. 사용자 정보 저장
                 userMapper.save(userDto); // user 테이블에 삽입
@@ -86,6 +86,12 @@ public class UserService {
                 // 5. 토큰을 DB에 저장
                 userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
 
+                // JWT 토큰을 쿠키에 저장
+                Cookie accessTokenCookie = new Cookie("access_token", accessToken);
+                accessTokenCookie.setHttpOnly(true);
+                accessTokenCookie.setMaxAge(3600); // 1시간
+                accessTokenCookie.setPath("/");
+                response.addCookie(accessTokenCookie);
             } else {
                 // 기존 사용자 예외 처리
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
@@ -95,6 +101,7 @@ public class UserService {
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
     }
+
 
 
     //비밀번호 변경요청 이메일 인증 코드

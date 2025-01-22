@@ -84,36 +84,13 @@ public class UserController {
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
 
-        // 사용자 정보 저장 (여기서 userDto는 클라이언트가 보낸 accessToken/refreshToken 없이 처리)
-        userService.saveFormUser(formUserDto, userDto);
+        // 사용자 정보 저장
+        userService.saveFormUser(formUserDto, userDto, response);
 
-        // 서버에서 Access Token과 Refresh Token 생성
-        String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
-        String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
-
-        // 사용자 권한 추가
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-
-        // 인증된 사용자 정보 설정
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                userDto, null, authorities
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        // JWT 토큰을 쿠키에 저장
-        Cookie accessTokenCookie = new Cookie("access_token", accessToken);
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setMaxAge(3600); // 1시간
-        accessTokenCookie.setPath("/");
-        response.addCookie(accessTokenCookie);
-
-        // 응답 메시지 반환 (토큰 포함)
+        // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();
         responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
         responseMap.put("userId", userDto.getUserId());
-        responseMap.put("accessToken", accessToken);
-        responseMap.put("refreshToken", refreshToken);
 
         return ResponseEntity.ok(responseMap);
     }
