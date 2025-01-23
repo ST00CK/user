@@ -55,7 +55,7 @@ public class UserService {
 
         userMapper.invalidateAccessToken(token);
     }
-
+    //@Transactional은 데이터베이스 작업을 하나의 작업 단위로 묶어준다.
     //폼회원가입
     @Transactional
     public void saveFormUser(FormUserDto formUserDto, UserDto userDto, HttpServletResponse response) {
@@ -68,10 +68,8 @@ public class UserService {
                 formUserDto.setPasswd(encodedPassword);
 
                 // 2. 인증 코드 생성 및 이메일 전송
-                String authCode = emailService.generateAuthCode();
-                sendAuthCodeEmail(userDto.getEmail(), authCode);
-
-
+//                String authCode = emailService.generateAuthCode();
+//                sendAuthCodeEmail(userDto.getEmail(), authCode);
 
                 // 3. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());

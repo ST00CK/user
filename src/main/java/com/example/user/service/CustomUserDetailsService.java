@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        // FormUserDto에서 비밀번호 가져오기
+
         FormUserDto formUserDto = formUserMapper.findById(username); // userId를 사용
         if (formUserDto == null) {
             throw new UsernameNotFoundException("폼 사용자 정보를 찾을 수 없습니다: " + username);

@@ -13,4 +13,5 @@ public class FormInfoDto {
 
     private FormUserDto formUserDto;
     private UserDto userDto;
+    private String authCode;  // 인증 코드 입력 필드 추가
 }
