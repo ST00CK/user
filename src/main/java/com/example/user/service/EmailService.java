@@ -2,6 +2,7 @@ package com.example.user.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -59,6 +60,12 @@ public class EmailService {
 
         mailSender.send(message);
     }
+    // 인증 코드 저장 (세션에 저장)
+    public void saveAuthCodeToSession(String email, String authCode, HttpSession session) {
+        session.setAttribute(email, authCode);
+    }
+
+
 
     //비밀번호 변경 메서드
     public void sendPasswordFindEmail(String to, String authCode) throws MessagingException {
@@ -76,4 +83,5 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
 }

@@ -69,10 +69,7 @@ public class UserController {
     })
     //폼 회원가입
     @PostMapping("/formuser")
-    public ResponseEntity<Map<String, String>> saveFormUser(
-            @RequestBody FormInfoDto formInfoDto,
-            @RequestParam String authCode, // 인증 코드 추가
-            HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
         if (SecurityContextHolder.getContext().getAuthentication() != null &&
                 SecurityContextHolder.getContext().getAuthentication().isAuthenticated() &&
@@ -86,7 +83,7 @@ public class UserController {
         UserDto userDto = formInfoDto.getUserDto();
 
         // 사용자 정보 저장
-        userService.saveFormUser(formUserDto, userDto, authCode, response);
+        userService.saveFormUser(formUserDto, userDto, response);
 
         // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();

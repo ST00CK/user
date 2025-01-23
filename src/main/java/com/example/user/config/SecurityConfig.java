@@ -99,8 +99,8 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/kakao-token", "/login").authenticated()
-                        .anyRequest().permitAll())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));//세션을 생성하거나 사용하지않음 jwt토큰 방식이기 때문에 세션 x
+                        .anyRequest().permitAll());
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));//세션을 생성하거나 사용하지않음 jwt토큰 방식이기 때문에 세션 x
 
 
 
