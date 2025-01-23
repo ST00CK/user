@@ -57,8 +57,9 @@ public class UserService {
     }
 
     //폼회원가입
+    //@Transactional은 데이터베이스 작업을 하나의 작업 단위로 묶어준다.
     @Transactional
-    public void saveFormUser(FormUserDto formUserDto, UserDto userDto, HttpServletResponse response) {
+    public void saveFormUser(FormUserDto formUserDto, UserDto userDto, String authCode, HttpServletResponse response) {
         try {
             // 기존 사용자인지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
@@ -68,30 +69,33 @@ public class UserService {
                 formUserDto.setPasswd(encodedPassword);
 
                 // 2. 인증 코드 생성 및 이메일 전송
-                String authCode = emailService.generateAuthCode();
-                sendAuthCodeEmail(userDto.getEmail(), authCode);
+                String generatedAuthCode = emailService.generateAuthCode();
+                sendAuthCodeEmail(userDto.getEmail(), generatedAuthCode);
 
-
-
-                // 3. 토큰 생성 (Access Token 및 Refresh Token)
+                // 3. 입력된 인증 코드와 발송된 인증 코드 비교
+                if (authCode == null || !authCode.equals(generatedAuthCode)) {
+                    throw new RuntimeException("인증 코드가 일치하지 않습니다.");
+                }
+                // 4. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
                 String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
                 userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(refreshToken);
 
-                // 4. 사용자 정보 저장
+                // 5. 사용자 정보 저장
                 userMapper.save(userDto); // user 테이블에 삽입
                 formUserMapper.save(formUserDto); // formuser 테이블에 삽입
 
-                // 5. 토큰을 DB에 저장
+                // 6. 토큰을 DB에 저장
                 userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
 
-                // JWT 토큰을 쿠키에 저장
+                // 7. JWT 토큰을 쿠키에 저장
                 Cookie accessTokenCookie = new Cookie("access_token", accessToken);
                 accessTokenCookie.setHttpOnly(true);
                 accessTokenCookie.setMaxAge(3600); // 1시간
                 accessTokenCookie.setPath("/");
                 response.addCookie(accessTokenCookie);
+
             } else {
                 // 기존 사용자 예외 처리
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
@@ -101,6 +105,7 @@ public class UserService {
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
     }
+
 
 
 
