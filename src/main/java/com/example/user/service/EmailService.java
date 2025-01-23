@@ -65,6 +65,16 @@ public class EmailService {
         session.setAttribute(email, authCode);
     }
 
+    // 인증 코드 검증
+    public boolean verifyAuthCode(String email, String inputCode, HttpSession session) {
+        String savedCode = (String) session.getAttribute(email);
+
+        if (savedCode == null) {
+            throw new RuntimeException("인증 코드가 존재하지 않습니다. 이메일 인증을 다시 시도해주세요.");
+        }
+
+        return savedCode.equals(inputCode);
+    }
 
 
     //비밀번호 변경 메서드

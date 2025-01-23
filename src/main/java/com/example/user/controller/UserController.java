@@ -3,6 +3,7 @@ package com.example.user.controller;
 import com.example.user.dto.*;
 import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.UserMapper;
+import com.example.user.service.EmailService;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
 import com.example.user.util.FormJwtUtils;
@@ -11,9 +12,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.http.HttpStatus;
@@ -37,7 +40,7 @@ public class UserController {
     private final FormUserMapper formUserMapper;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final FormJwtUtils formJwtUtils;
-
+    private final EmailService emailService;
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
     @ApiResponses(value = {
@@ -60,6 +63,69 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "로그아웃 처리 중 오류가 발생했습니다."));
         }
     }
+
+
+    @Operation(summary = "인증 이메일 발송", description = "회원가입 시 인증 이메일을 발송합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증 이메일이 전송되었습니다."),
+            @ApiResponse(responseCode = "400", description = "이메일을 입력해주세요."),
+            @ApiResponse(responseCode = "500", description = "이메일 전송에 실패했습니다.")
+    })
+    //회원가입 이메일 보내기
+    @PostMapping("/send")
+    public ResponseEntity<String> sendAuthEmail(@RequestBody Map<String, String> request, HttpSession session) {
+        String email = request.get("email");
+
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body("이메일을 입력해주세요.");
+        }
+
+        // 인증코드 생성
+        String authCode = emailService.generateAuthCode();
+
+        try {
+            // 이메일 전송
+            emailService.sendEmail(email, authCode);
+
+            // 인증코드 세션 저장
+            emailService.saveAuthCodeToSession(email, authCode, session);
+
+            return ResponseEntity.ok("인증 이메일이 전송되었습니다.");
+        } catch (MessagingException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이메일 전송에 실패했습니다.");
+        }
+    }
+
+    @Operation(summary = "인증 코드 검증", description = "회원가입 시 발송된 인증 코드를 검증합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증이 성공적으로 완료되었습니다."),
+            @ApiResponse(responseCode = "400", description = "이메일과 인증 코드를 입력해주세요."),
+            @ApiResponse(responseCode = "401", description = "인증 코드가 올바르지 않습니다."),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    //회원가입 이메일 검증
+    @PostMapping("/verify")
+    public ResponseEntity<String> verifyAuthCode(@RequestBody Map<String, String> request, HttpSession session) {
+        String email = request.get("email");
+        String inputCode = request.get("authCode");
+
+        if (email == null || inputCode == null) {
+            return ResponseEntity.badRequest().body("이메일과 인증 코드를 입력해주세요.");
+        }
+
+        try {
+            boolean isVerified = emailService.verifyAuthCode(email, inputCode, session);
+
+            if (isVerified) {
+                return ResponseEntity.ok("인증이 성공적으로 완료되었습니다.");
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 코드가 올바르지 않습니다.");
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
 
 
     @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")

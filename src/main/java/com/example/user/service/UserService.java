@@ -68,8 +68,8 @@ public class UserService {
                 formUserDto.setPasswd(encodedPassword);
 
                 // 2. 인증 코드 생성 및 이메일 전송
-                String authCode = emailService.generateAuthCode();
-                sendAuthCodeEmail(userDto.getEmail(), authCode);
+//                String authCode = emailService.generateAuthCode();
+//                sendAuthCodeEmail(userDto.getEmail(), authCode);
 
                 // 3. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
