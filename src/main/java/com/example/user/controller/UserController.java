@@ -182,17 +182,17 @@ public class UserController {
         if (!bCryptPasswordEncoder.matches(passwd, user.getPasswd())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "비밀번호가 일치하지 않습니다."));
-
         }
-        System.out.println("userid" + userId);
-        System.out.println("passwd" + passwd);
-        System.out.println("getpasswd" + user.getPasswd());
-        System.out.println("user" + user);
+
+        UserDto userInfo = userMapper.findByUserId(userId);
 
         // 응답 메시지 생성
         Map<String, String> responseMap = new HashMap<>();
         responseMap.put("message", "로그인이 성공적으로 완료되었습니다.");
-        responseMap.put("userId", userId);
+        responseMap.put("userId", userInfo.getUserId());
+        responseMap.put("email", userInfo.getEmail());
+        responseMap.put("file", userInfo.getFile());
+        responseMap.put("name", userInfo.getName());
 
         return ResponseEntity.ok(responseMap);
     }
