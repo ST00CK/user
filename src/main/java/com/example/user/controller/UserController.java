@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.User;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -326,6 +327,7 @@ public class UserController {
 
         System.out.println("Access Token: " + accessToken);
 
+
         // 쿠키에서 refresh_token 추출
         String refreshTokenFromCookie = getRefreshTokenFromCookie(request);
         String refreshToken = tokenData.get("refresh_token");
@@ -346,11 +348,17 @@ public class UserController {
 
         try {
             // 카카오 사용자 정보 조회
-            kaKaoService.getKakaoUserInfo(accessToken, refreshToken);
+            KaKaoDto kaKaoDto = kaKaoService.getKakaoUserInfo(accessToken, refreshToken);
+            UserDto userdto = kaKaoDto.getUserDto();
+
 
             Map<String, String> response = new HashMap<>();
             response.put("access_token", accessToken);
             response.put("refresh_token", refreshToken);
+            response.put("userId", userdto.getUserId());
+            response.put("name", userdto.getName());
+            response.put("email", userdto.getEmail());
+            response.put("file", userdto.getFile());
             System.out.println("응답 리프레시 토큰: " + refreshToken);
             return ResponseEntity.ok(response);
 
