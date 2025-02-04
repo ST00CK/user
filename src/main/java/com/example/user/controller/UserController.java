@@ -167,7 +167,7 @@ public class UserController {
     }
 
 
-    @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")
+    @Operation(summary = "프로필 사진 변경", description = "유저의 프로필 변경")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "프로필 사진 변경 성공",
                     content = @Content(mediaType = "application/json",
