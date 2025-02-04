@@ -21,4 +21,5 @@ public class UserDto {
     private String refreshToken; //리프레시토큰
     private String file; //프로필사진
 
+
 }
