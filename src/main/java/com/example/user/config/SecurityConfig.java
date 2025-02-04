@@ -6,6 +6,7 @@ import com.example.user.mapper.UserMapper;
 import com.example.user.service.CustomUserDetailsService;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
+import com.example.user.service.minio.MinioService;
 import com.example.user.util.*;
 import lombok.RequiredArgsConstructor;
 import org.mybatis.spring.annotation.MapperScan;
@@ -43,6 +44,7 @@ public class SecurityConfig {
     private final KaKaoService kaKaoService;
     private final FormJwtUtils formJwtUtils;
     private final AuthenticationConfiguration authenticationConfiguration;
+    private final MinioService minioService;
 
 
 
@@ -102,6 +104,9 @@ public class SecurityConfig {
                         .anyRequest().permitAll());
 //                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));//세션을 생성하거나 사용하지않음 jwt토큰 방식이기 때문에 세션 x
 
+
+//        http
+//                .addFilterBefore(new CustomMultipartFilter(), UsernamePasswordAuthenticationFilter.class);
 
 
         // .class는 Spring Security에서 제공하는 필터로 커스텀한 필터를 앞에 붙이면 해당 필터보다 먼저 실행된다.

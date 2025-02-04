@@ -6,9 +6,12 @@ import com.example.user.mapper.UserMapper;
 import com.example.user.service.EmailService;
 import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
+import com.example.user.service.minio.MinioService;
 import com.example.user.util.FormJwtUtils;
 import com.example.user.util.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,12 +22,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.apache.catalina.User;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.*;
@@ -42,6 +47,7 @@ public class UserController {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final FormJwtUtils formJwtUtils;
     private final EmailService emailService;
+    private final MinioService minioService;
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
     @ApiResponses(value = {
@@ -128,7 +134,6 @@ public class UserController {
     }
 
 
-
     @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "회원가입 성공"),
@@ -144,10 +149,11 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
-
         // 클라이언트 요청에서 필요한 정보만 추출
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
+
+        userDto.setFile("https://minio.bmops.org/stoock/Default.jpg");
 
         // 사용자 정보 저장
         userService.saveFormUser(formUserDto, userDto, response);
@@ -161,6 +167,49 @@ public class UserController {
     }
 
 
+    @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "프로필 사진 변경 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"message\": \"프로필 사진이 성공적으로 변경되었습니다.\", \"fileUrl\": \"https://minio.bmops.org/stoock/user123/new-image.jpg\"}"))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"message\": \"프로필 사진 변경 중 오류가 발생하였습니다.\"}")))
+    })
+    @PostMapping("/upload")
+    public ResponseEntity<Map<String, String>> photoChange(@RequestPart("userId") String userId, @RequestPart("file") MultipartFile file) {
+        try {
+            // 기존 사용자 정보 조회
+            UserDto userDto = userMapper.findByUserId(userId);
+
+
+            // 새로운 파일 업로드
+            String fileName = minioService.uploadFile("stoock", userDto.getUserId(), file);
+
+            // 파일 URL 생성
+            String fileUrl = "https://minio.bmops.org/stoock/" + userDto.getUserId() + "/" + fileName;
+
+            // 프로필 사진 URL 업데이트
+
+            userMapper.updateProfileImage(userId, fileUrl); // 프로필 이미지 DB 업데이트
+            userDto.setFile(fileUrl);
+
+            // 응답 메시지 반환
+            Map<String, String> responseMap = new HashMap<>();
+            responseMap.put("message", "프로필 사진이 성공적으로 변경되었습니다.");
+            responseMap.put("fileUrl", fileUrl);
+            System.out.println("fileUrl" + fileUrl);
+            System.out.println("file" + file);
+
+            return ResponseEntity.ok(responseMap);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "프로필 사진 변경 중 오류가 발생하였습니다."));
+        }
+    }
+
+
     @Operation(summary = "폼 로그인", description = "사용자가 아이디와 비밀번호를 통해 로그인합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그인 성공"),
@@ -171,6 +220,7 @@ public class UserController {
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginDto loginDto) {
         String userId = loginDto.getUserId();
         String passwd = loginDto.getPasswd();  // 로그인 요청에서 전달된 패스워드
+
 
         // 사용자 정보 조회
         LoginDto user = formUserMapper.findLoginUser(userId);
@@ -208,6 +258,9 @@ public class UserController {
         try {
             // 리프레시 토큰을 검증하고 새로운 액세스 토큰을 발급
             String newAccessToken = formJwtUtils.refreshAccessToken(refreshToken);
+
+            UserDto userDto = new UserDto();
+            userDto.setAccessToken(newAccessToken);
 
             // 새로운 액세스 토큰을 응답으로 반환
             return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
