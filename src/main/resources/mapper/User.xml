@@ -41,6 +41,24 @@
         where user_id = #{userId}
     </update>
 
+    <update id="updateAccessToken" parameterType="String">
+        update user
+        set access_token = #{accessToken}
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateRefreshToken" parameterType="String">
+        update user
+        set refresh_token = #{refreshToken}
+        where user_id = #{userId}
+    </update>
+
+    <select id="findByRefreshToken" parameterType="String" resultType="UserDto">
+        select *
+        from user
+        where refresh_token = #{refreshToken}
+    </select>
+
 
 
 
