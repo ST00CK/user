@@ -97,10 +97,12 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             // 리프레시 토큰을 HttpOnly 쿠키에 추가
             Cookie refreshCookie = new Cookie("Refresh-Token", refreshToken);
             refreshCookie.setHttpOnly(true);  // JavaScript에서 접근 불가
-            refreshCookie.setSecure(true);    // HTTPS에서만 전송
+            refreshCookie.setSecure(false);    // HTTPS에서만 전송
             refreshCookie.setPath("/");      // 쿠키 유효 경로 설정
             refreshCookie.setMaxAge(60 * 60 * 24 * 7); // 쿠키 만료 기간 설정 (7일)
             response.addCookie(refreshCookie);
+
+            System.out.println("리프레시" + refreshToken);
 
             log.debug("JWT refresh token added to response cookie.");
 

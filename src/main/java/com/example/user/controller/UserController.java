@@ -21,8 +21,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -86,17 +84,13 @@ public class UserController {
         if (email == null || email.isEmpty()) {
             return ResponseEntity.badRequest().body("이메일을 입력해주세요.");
         }
-
         // 인증코드 생성
         String authCode = emailService.generateAuthCode();
-
         try {
             // 이메일 전송
             emailService.sendEmail(email, authCode);
-
             // 인증코드 세션 저장
             emailService.saveAuthCodeToSession(email, authCode, session);
-
             return ResponseEntity.ok("인증 이메일이 전송되었습니다.");
         } catch (MessagingException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이메일 전송에 실패했습니다.");
@@ -254,22 +248,38 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
     })
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refreshAccessToken(@CookieValue("Refresh-Token") String refreshToken) {
+    public ResponseEntity<Map<String, String>> refreshAccessToken(@CookieValue(value = "Refresh-Token", required = false) String refreshToken) {
         try {
+            System.out.println("Received Refresh Token: " + refreshToken);
+
             // 리프레시 토큰을 검증하고 새로운 액세스 토큰을 발급
             String newAccessToken = formJwtUtils.refreshAccessToken(refreshToken);
+            System.out.println("New Access Token: " + newAccessToken);
 
-            UserDto userDto = new UserDto();
+            // 🔹 서비스 계층을 통해 유저 정보 조회
+            UserDto userDto = userService.findByRefreshToken(refreshToken);
+            if (userDto == null) {
+                System.out.println("DB에 해당 Refresh Token이 없음!");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "유효하지 않은 리프레시 토큰입니다."));
+            }
+
+            System.out.println("User Found: " + userDto.getUserId());
+
+            // 액세스 토큰 갱신
             userDto.setAccessToken(newAccessToken);
+
+            // 🔹 서비스 계층을 통해 액세스 토큰 업데이트
+            userService.updateAccessToken(userDto.getUserId(), newAccessToken);
 
             // 새로운 액세스 토큰을 응답으로 반환
             return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
         } catch (RuntimeException e) {
-            // 토큰 검증 실패 시 에러 메시지 반환
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", e.getMessage()));
         }
     }
+
 
     @Operation(summary = "사용자 ID로 폼로그인 사용자 정보 조회", description = "사용자 ID를 사용하여 사용자 정보를 가져옵니다.")
     @ApiResponses(value = {

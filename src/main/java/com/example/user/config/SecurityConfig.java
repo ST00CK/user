@@ -85,14 +85,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
-                    // CORS 설정을 커스터마이징하는 코드 시작.
-                    CorsConfiguration corsConfiguration = new CorsConfiguration();// CORS 설정 객체 생성. 이 객체에 CORS 정책(허용 도메인, 메서드 등)을 설정
-                    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));  // 허용할 도메인(Origin)을 설정
-                    corsConfiguration.setAllowedMethods(Collections.singletonList("*"));// 허용할 HTTP 메서드를 설정
-                    corsConfiguration.setAllowCredentials(true);// 자격 증명(쿠키, 인증 헤더 등)을 요청에 포함하는 것을 허용
-                    corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));// 클라이언트가 요청 시 보낼 수 있는 HTTP 헤더를 설정
-                    corsConfiguration.setMaxAge(3600L);// CORS 설정의 캐시 지속 시간
-                    corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
+                    CorsConfiguration corsConfiguration = new CorsConfiguration(); // CORS 설정 객체 생성
+                    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:3000")); // 허용할 도메인 설정
+                    corsConfiguration.setAllowedMethods(Collections.singletonList("*")); // 모든 HTTP 메서드 허용
+                    corsConfiguration.setAllowCredentials(true); // 자격 증명 허용
+                    corsConfiguration.setAllowedHeaders(Collections.singletonList("*")); // 모든 헤더 허용
+                    corsConfiguration.setMaxAge(3600L); // 캐시 지속 시간 설정
+                    corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization")); // 노출할 헤더 설정
                     return corsConfiguration;
                 }))
                 .logout(logout -> logout.disable())

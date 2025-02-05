@@ -48,6 +48,17 @@ public class UserService {
         return userMapper.findByUserId(userId);
     }
 
+    @Transactional
+    public void updateRefreshToken(String userId, String refreshToken) {
+        userMapper.updateRefreshToken(userId, refreshToken);
+    }
+
+    @Transactional
+    public void updateAccessToken(String userId, String accessToken) {
+        userMapper.updateAccessToken(userId, accessToken);
+    }
+
+
 
     //로그아웃
     @Transactional
@@ -99,7 +110,10 @@ public class UserService {
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
     }
+public UserDto findByRefreshToken(String refreshToken) {
+        return userMapper.findByRefreshToken(refreshToken);
 
+}
 
 
     //비밀번호 변경요청 이메일 인증 코드
