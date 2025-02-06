@@ -33,5 +33,11 @@
         where user_id = #{userId}
     </update>
 
+    <select id="findByUserId" parameterType="String" resultType="FormUserDto">
+        select *
+        from form_user
+        where user_id = #{userId}
+    </select>
+
 
 </mapper>

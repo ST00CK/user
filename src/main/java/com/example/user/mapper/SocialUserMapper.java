@@ -10,8 +10,7 @@ public interface SocialUserMapper {
 
     void save(SocialUserDto socialuserdto);
 
-
-
+    SocialUserDto findByUserId(String userId);
 
 
 

@@ -28,10 +28,6 @@ public class UserService {
     private final JwtUtils jwtUtils;
 
 
-    //회원가입 메일전송 메서드
-    private void sendAuthCodeEmail(String email, String authCode) throws MessagingException {
-        emailService.sendEmail(email, authCode);
-    }
 
     //비밀번호변경 메일전송 메서드
     private void sendPasswordFindEmail(String email, String authCode) throws MessagingException {
@@ -48,17 +44,41 @@ public class UserService {
         return userMapper.findByUserId(userId);
     }
 
-    @Transactional
-    public void updateRefreshToken(String userId, String refreshToken) {
-        userMapper.updateRefreshToken(userId, refreshToken);
-    }
 
+//엑세스토큰 업데이트
     @Transactional
     public void updateAccessToken(String userId, String accessToken) {
         userMapper.updateAccessToken(userId, accessToken);
     }
 
+// 폼, 소셜 연동
+@Transactional
+public String linkSocialToFormUser(SocialUserDto socialUserDto, UserDto userDto, boolean link) {
+    if (link) {
+        // 이메일을 기준으로 폼 유저를 찾기
+        FormUserDto formUser = formUserMapper.findByUserId(userDto.getEmail());
 
+        if (formUser != null) {
+            // 이미 연동된 소셜 유저가 있는지 확인
+            SocialUserDto existingSocialUser = socialUserMapper.findByUserId(formUser.getUserId());
+
+            if (existingSocialUser != null) {
+                return "이미 연동된 유저입니다.";
+            }
+
+            // 폼 유저가 있으면 소셜 유저와 연동
+            socialUserDto.setUserId(formUser.getUserId());
+            socialUserMapper.save(socialUserDto);
+            return "소셜 유저와 폼 유저 연동 성공";
+        } else {
+            // 폼 유저가 없으면 연동할 수 없음
+            return "폼 유저가 없어서 연동할 수 없습니다.";
+        }
+    } else {
+        // 연동을 원하지 않으면
+        return "연동을 원하지 않음";
+    }
+}
 
     //로그아웃
     @Transactional
