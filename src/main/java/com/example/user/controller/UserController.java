@@ -10,6 +10,7 @@ import com.example.user.service.minio.MinioService;
 import com.example.user.util.FormJwtUtils;
 import com.example.user.util.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -241,6 +242,33 @@ public class UserController {
 
         return ResponseEntity.ok(responseMap);
     }
+
+
+    @Operation(
+            summary = "소셜유저, 폼유저 연동",
+            description = "소셜유저와 폼 유저를 연동합니다. 연동 여부에 따라 처리됩니다."
+    )
+    @PostMapping("/link")
+    public ResponseEntity<String> linkSocialToFormUser(
+            @Parameter(
+                    description = "소셜 유저 정보, 폼 유저 정보, 유저 정보 및 연동 여부를 포함한 요청 데이터",
+                    required = true,
+                    schema = @Schema(implementation = UserLinkRequestDto.class)
+            )
+            @RequestBody UserLinkRequestDto requestDto
+    ) {
+        // 요청 바디에서 소셜유저, 폼유저, 유저 정보 dto 추출
+        SocialUserDto socialUserDto = requestDto.getSocialUserDto();
+        FormUserDto formUserDto = requestDto.getFormUserDto();
+        UserDto userDto = requestDto.getUserDto();
+        boolean link = requestDto.isLink(); // 연동 여부 추출
+
+        // 연동 여부에 맞게 메서드 호출
+        String resultMessage = userService.linkSocialToFormUser(socialUserDto, userDto, link);
+
+        return ResponseEntity.ok(resultMessage);
+    }
+
 
     @Operation(summary = "폼 유저 액세스 토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
     @ApiResponses(value = {
