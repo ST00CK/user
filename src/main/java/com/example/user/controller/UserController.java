@@ -143,7 +143,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "회원가입 성공"),
             @ApiResponse(responseCode = "403", description = "이미 로그인된 사용자")
     })
-    //폼 회원가입
+    // 폼 회원가입
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
@@ -153,14 +153,19 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
+
         // 클라이언트 요청에서 필요한 정보만 추출
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
 
         userDto.setFile("https://minio.bmops.org/stoock/Default.jpg");
 
-        // 사용자 정보 저장
-        userService.saveFormUser(formUserDto, userDto, response);
+        // 소셜 계정 연동 여부 체크
+        boolean link = true; // 소셜 계정을 연동할 경우 true
+
+        // 사용자 정보 저장 및 소셜 연동
+        String result = userService.saveFormUser(formUserDto, userDto, link, response);
+        System.out.println(result);
 
         // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();
@@ -169,6 +174,7 @@ public class UserController {
 
         return ResponseEntity.ok(responseMap);
     }
+
 
 
     @Operation(summary = "프로필 사진 변경", description = "유저의 프로필 변경")
@@ -181,7 +187,7 @@ public class UserController {
                             schema = @Schema(example = "{\"message\": \"프로필 사진 변경 중 오류가 발생하였습니다.\"}")))
     })
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, String>> photoChange(@RequestPart("userId") String userId, @RequestPart("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> photoChange(@RequestParam("userId") String userId, @RequestPart("file") MultipartFile file) {
         try {
             // 기존 사용자 정보 조회
             UserDto userDto = userMapper.findByUserId(userId);

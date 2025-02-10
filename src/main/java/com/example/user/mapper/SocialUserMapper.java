@@ -12,6 +12,8 @@ public interface SocialUserMapper {
 
     SocialUserDto findByUserId(String userId);
 
+    SocialUserDto findByEmail(String email);
+
 
 
 }
