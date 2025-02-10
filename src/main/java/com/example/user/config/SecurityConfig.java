@@ -8,6 +8,12 @@ import com.example.user.service.KaKaoService;
 import com.example.user.service.UserService;
 import com.example.user.service.minio.MinioService;
 import com.example.user.util.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
@@ -25,7 +31,9 @@ import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationF
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -101,11 +109,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/kakao-token", "/login").authenticated()
                         .anyRequest().permitAll());
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));//세션을 생성하거나 사용하지않음 jwt토큰 방식이기 때문에 세션 x
 
+        // 세션 쿠키 설정
 
-//        http
-//                .addFilterBefore(new CustomMultipartFilter(), UsernamePasswordAuthenticationFilter.class);
+        http
+                .addFilterBefore(new SessionCookieFilter(), UsernamePasswordAuthenticationFilter.class)
+                .authorizeRequests()
+                .anyRequest().authenticated(); // 예시로 모든 요청에 인증을 요구하는 설정
+
 
 
         // .class는 Spring Security에서 제공하는 필터로 커스텀한 필터를 앞에 붙이면 해당 필터보다 먼저 실행된다.

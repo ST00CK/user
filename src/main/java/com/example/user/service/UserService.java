@@ -1,5 +1,6 @@
 package com.example.user.service;
 
+import com.example.user.client.UserClient;
 import com.example.user.dto.FormUserDto;
 import com.example.user.dto.SocialUserDto;
 import com.example.user.dto.UserDto;
@@ -26,8 +27,13 @@ public class UserService {
     private final EmailService emailService;
     private final SocialUserMapper socialUserMapper;
     private final JwtUtils jwtUtils;
+    private final UserClient userClient;
 
 
+    //open feign 유저정보 보내기
+    public UserDto getUserInfo(String userId) {
+        return userClient.getUserInfo(userId);
+    }
 
     //비밀번호변경 메일전송 메서드
     private void sendPasswordFindEmail(String email, String authCode) throws MessagingException {

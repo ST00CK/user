@@ -73,4 +73,11 @@
     </select>
 
 
+    <select id="getUserInfo" parameterType="String" resultType="UserDto">
+        select user_id, file
+        from user
+        where user_id = #{user_id}
+    </select>
+
+
 </mapper>
