@@ -27,5 +27,5 @@ public interface UserMapper {
 
     UserDto getUserInfo(String userId);
 
-
+    UserDto findByEmail(String email);
 }

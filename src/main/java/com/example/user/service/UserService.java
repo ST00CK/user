@@ -51,40 +51,12 @@ public class UserService {
     }
 
 
-//엑세스토큰 업데이트
+    //엑세스토큰 업데이트
     @Transactional
     public void updateAccessToken(String userId, String accessToken) {
         userMapper.updateAccessToken(userId, accessToken);
     }
 
-// 폼, 소셜 연동
-@Transactional
-public String linkSocialToFormUser(SocialUserDto socialUserDto, UserDto userDto, boolean link) {
-    if (link) {
-        // 이메일을 기준으로 폼 유저를 찾기
-        FormUserDto formUser = formUserMapper.findByUserId(userDto.getEmail());
-
-        if (formUser != null) {
-            // 이미 연동된 소셜 유저가 있는지 확인
-            SocialUserDto existingSocialUser = socialUserMapper.findByUserId(formUser.getUserId());
-
-            if (existingSocialUser != null) {
-                return "이미 연동된 유저입니다.";
-            }
-
-            // 폼 유저가 있으면 소셜 유저와 연동
-            socialUserDto.setUserId(formUser.getUserId());
-            socialUserMapper.save(socialUserDto);
-            return "소셜 유저와 폼 유저 연동 성공";
-        } else {
-            // 폼 유저가 없으면 연동할 수 없음
-            return "폼 유저가 없어서 연동할 수 없습니다.";
-        }
-    } else {
-        // 연동을 원하지 않으면
-        return "연동을 원하지 않음";
-    }
-}
 
     //로그아웃
     @Transactional
@@ -92,54 +64,77 @@ public String linkSocialToFormUser(SocialUserDto socialUserDto, UserDto userDto,
 
         userMapper.invalidateAccessToken(token);
     }
+
     //@Transactional은 데이터베이스 작업을 하나의 작업 단위로 묶어준다.
-    //폼회원가입
     @Transactional
-    public void saveFormUser(FormUserDto formUserDto, UserDto userDto, HttpServletResponse response) {
+    public String saveFormUser(FormUserDto formUserDto, UserDto userDto, boolean link, HttpServletResponse response) {
         try {
-            // 기존 사용자인지 확인
+            // 1️⃣ 기존 사용자인지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
-            if (existingUser == null) {
-                // 1. 비밀번호 암호화
-                String encodedPassword = bCryptPasswordEncoder.encode(formUserDto.getPasswd());
-                formUserDto.setPasswd(encodedPassword);
-
-                // 2. 인증 코드 생성 및 이메일 전송
-//                String authCode = emailService.generateAuthCode();
-//                sendAuthCodeEmail(userDto.getEmail(), authCode);
-
-                // 3. 토큰 생성 (Access Token 및 Refresh Token)
-                String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
-                String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
-                userDto.setAccessToken(accessToken);
-                userDto.setRefreshToken(refreshToken);
-
-                // 4. 사용자 정보 저장
-                userMapper.save(userDto); // user 테이블에 삽입
-                formUserMapper.save(formUserDto); // formuser 테이블에 삽입
-
-                // 5. 토큰을 DB에 저장
-                userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
-
-                // JWT 토큰을 쿠키에 저장
-                Cookie accessTokenCookie = new Cookie("access_token", accessToken);
-                accessTokenCookie.setHttpOnly(true);
-                accessTokenCookie.setMaxAge(3600); // 1시간
-                accessTokenCookie.setPath("/");
-                response.addCookie(accessTokenCookie);
-            } else {
-                // 기존 사용자 예외 처리
+            if (existingUser != null) {
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
             }
+
+            // 2️⃣ 비밀번호 암호화
+            String encodedPassword = bCryptPasswordEncoder.encode(formUserDto.getPasswd());
+            formUserDto.setPasswd(encodedPassword);
+
+            // 3️⃣ 토큰 생성 (Access Token 및 Refresh Token)
+            String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
+            String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
+            userDto.setAccessToken(accessToken);
+            userDto.setRefreshToken(refreshToken);
+
+            // 4️⃣ 사용자 정보 저장
+            userMapper.save(userDto); // user 테이블에 삽입
+            formUserMapper.save(formUserDto); // formuser 테이블에 삽입
+
+            // 5️⃣ 토큰을 DB에 저장
+            userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
+
+            // 6️⃣ JWT 토큰을 쿠키에 저장
+            Cookie accessTokenCookie = new Cookie("access_token", accessToken);
+            accessTokenCookie.setHttpOnly(true);
+            accessTokenCookie.setMaxAge(3600);
+            accessTokenCookie.setPath("/");
+            response.addCookie(accessTokenCookie);
+
+            // 7️⃣ 소셜 계정 연동 여부 확인
+            if (link) {
+                // 소셜 로그인 이메일을 기준으로 사용자 조회
+                UserDto existingEmailUser = userMapper.findByEmail(userDto.getEmail());
+
+                // 이미 존재하는 사용자가 있으면 연동
+                if (existingEmailUser != null) {
+                    // 소셜 유저 DTO 생성
+                    SocialUserDto socialUserDto = new SocialUserDto();
+                    socialUserDto.setUserId(existingEmailUser.getUserId());
+                    socialUserDto.setProviderType("NONE"); // 기본값 설정 (소셜 연동 없음)
+
+                    // 폼 유저와 소셜 유저 연동
+                    socialUserMapper.save(socialUserDto);
+                    return "회원가입 및 소셜 계정 연동 성공";
+                } else {
+                    // 기존 사용자 없으면 신규로 회원가입 진행
+                    return "해당 이메일로 가입된 사용자가 없습니다.";
+                }
+            }
+
+            return "회원가입 성공";  // 소셜 연동이 없으면 회원가입 성공 메시지 반환
+
         } catch (Exception e) {
-            // 예외 처리
-            throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
+            throw new RuntimeException("회원가입 및 소셜 연동 처리 중 오류 발생", e);
         }
     }
-public UserDto findByRefreshToken(String refreshToken) {
+
+
+
+
+
+    public UserDto findByRefreshToken(String refreshToken) {
         return userMapper.findByRefreshToken(refreshToken);
 
-}
+    }
 
 
     //비밀번호 변경요청 이메일 인증 코드
@@ -205,30 +200,72 @@ public UserDto findByRefreshToken(String refreshToken) {
         // 7. 토큰 업데이트
         userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
     }
+    // 폼, 소셜 연동
+    @Transactional
+    public String linkSocialToFormUser(SocialUserDto socialUserDto, UserDto userDto, boolean link) {
+        if (link) {
+            // 이메일을 기준으로 폼 유저를 찾기
+            FormUserDto formUser = formUserMapper.findByUserId(userDto.getEmail());
+
+            if (formUser != null) {
+                // 이미 연동된 소셜 유저가 있는지 확인
+                SocialUserDto existingSocialUser = socialUserMapper.findByUserId(formUser.getUserId());
+
+                if (existingSocialUser != null) {
+                    return "이미 연동된 유저입니다.";
+                }
+
+                // 폼 유저가 있으면 소셜 유저와 연동
+                socialUserDto.setUserId(formUser.getUserId());
+                socialUserMapper.save(socialUserDto);
+                return "소셜 유저와 폼 유저 연동 성공";
+            } else {
+                // 폼 유저가 없으면 연동할 수 없음
+                return "폼 유저가 없어서 연동할 수 없습니다.";
+            }
+        } else {
+            // 연동을 원하지 않으면
+            return "연동을 원하지 않음";
+        }
+    }
 
     //소셜유저 로그인
     @Transactional
-    public String saveSocialUser(SocialUserDto socialUserDto, UserDto userDto) {
+    public String saveSocialUser(SocialUserDto socialUserDto, UserDto userDto, boolean link) {
         try {
             // 기존 사용자가 있는지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
 
             if (existingUser == null) {
-                // 사용자가 없으면 새로 삽입
-                userMapper.socialSave(userDto); // UserDto 테이블에 저장
-                socialUserMapper.save(socialUserDto); // SocialUserDto 테이블에 저장
-            } else {
-                // 사용자가 있으면 토큰 정보 업데이트
-                userMapper.updateAccessTokenAndRefreshToken(
-                        userDto.getUserId(), userDto.getAccessToken(), userDto.getRefreshToken()
-                );
+                // 신규 유저면 회원가입 처리
+                userMapper.socialSave(userDto);
+                socialUserMapper.save(socialUserDto);
+                return "소셜 회원가입 성공";
             }
-            return "success";
+
+            //  자동 연동 로직 추가
+            FormUserDto formUser = formUserMapper.findByUserId(userDto.getEmail());
+            if (formUser != null) {
+                // 이미 연동된 소셜 유저가 있는지 확인
+                SocialUserDto existingSocialUser = socialUserMapper.findByUserId(formUser.getUserId());
+                if (existingSocialUser == null) {
+                    // 폼 유저와 소셜 유저 연동
+                    socialUserDto.setUserId(formUser.getUserId());
+                    socialUserMapper.save(socialUserDto);
+                    return "소셜 로그인 & 폼 유저 자동 연동 성공";
+                }
+            }
+
+            // 기존 사용자인 경우, 토큰 정보 업데이트
+            userMapper.updateAccessTokenAndRefreshToken(
+                    userDto.getUserId(), userDto.getAccessToken(), userDto.getRefreshToken()
+            );
+
+            return "소셜 로그인 성공";
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
+            throw new RuntimeException("소셜 로그인 또는 연동 처리 중 오류가 발생하였습니다.", e);
         }
+
     }
-
-
 }

@@ -70,7 +70,7 @@ public class OAuth2LoginFilter extends OncePerRequestFilter {
             }
 
             // 사용자 정보 저장 및 JWT 생성
-            String result = userService.saveSocialUser(kaKaoDto.getSocialUserDto(), kaKaoDto.getUserDto());
+            String result = userService.saveSocialUser(kaKaoDto.getSocialUserDto(), kaKaoDto.getUserDto(), true);
             String jwtToken = jwtUtils.generateToken(kaKaoDto.getUserDto());
             response.addHeader("Authorization", "Bearer " + jwtToken);
 
