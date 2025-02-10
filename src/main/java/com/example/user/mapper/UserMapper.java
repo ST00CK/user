@@ -25,7 +25,7 @@ public interface UserMapper {
 
     UserDto findByRefreshToken(String refreshToken);
 
-
+    UserDto getUserInfo(String userId);
 
 
 }
