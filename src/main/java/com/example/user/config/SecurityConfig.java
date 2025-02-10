@@ -111,26 +111,16 @@ public class SecurityConfig {
                         .anyRequest().permitAll());
 
         // 세션 쿠키 설정
-
         http
-                .addFilterBefore(new SessionCookieFilter(), UsernamePasswordAuthenticationFilter.class)
-                .authorizeRequests()
-                .anyRequest().authenticated(); // 예시로 모든 요청에 인증을 요구하는 설정
+                .addFilterBefore(new SessionCookieFilter(), UsernamePasswordAuthenticationFilter.class);
 
 
-
-        // .class는 Spring Security에서 제공하는 필터로 커스텀한 필터를 앞에 붙이면 해당 필터보다 먼저 실행된다.
-        // CustomRequestWrappingFilter 추가
-        http.addFilterBefore(
-                new CustomRequestWrappingFilter(), UsernamePasswordAuthenticationFilter.class);
-        // JwtAuthenticationFilter 등록
-        http.addFilterBefore(
-                new JwtAuthenticationFilter(formJwtUtils,authenticationManager), UsernamePasswordAuthenticationFilter.class);
+        // CustomRequestWrappingFilter 및 JwtAuthenticationFilter 설정
+        http.addFilterBefore(new CustomRequestWrappingFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthenticationFilter(formJwtUtils, authenticationManager), UsernamePasswordAuthenticationFilter.class);
 
         // OAuth2LoginFilter 등록
-        http.addFilterBefore(
-                new OAuth2LoginFilter(kaKaoService, jwtUtils, userService),
-                OAuth2LoginAuthenticationFilter.class);
+        http.addFilterBefore(new OAuth2LoginFilter(kaKaoService, jwtUtils, userService), OAuth2LoginAuthenticationFilter.class);
 
         return http.build();
     }
