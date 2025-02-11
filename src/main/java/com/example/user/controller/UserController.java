@@ -106,7 +106,7 @@ public class UserController {
         }
     }
 
-    @Operation(summary = "인증 코드 검증", description = "회원가입 시 발송된 인증 코드를 검증합니다.")
+    @Operation(summary = "인증 코드 검증", description = "회원가입, 패스워드찾기 인증 코드를 검증합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증이 성공적으로 완료되었습니다."),
             @ApiResponse(responseCode = "400", description = "이메일과 인증 코드를 입력해주세요."),
@@ -138,7 +138,12 @@ public class UserController {
         }
     }
 
-
+    @Operation(summary = "비밀번호 찾기 이메일 전송", description = "이메일을 통해 비밀번호 찾기 인증코드를 전송합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증코드 전송 성공"),
+            @ApiResponse(responseCode = "400", description = "이메일을 입력해주세요."),
+            @ApiResponse(responseCode = "500", description = "이메일 전송 중 오류 발생")
+    })
     @PostMapping("find/password")
     public ResponseEntity<String> sendPasswordFindEmail(@RequestBody Map<String, String> request, HttpSession session) {
         String email = request.get("email");
@@ -166,7 +171,6 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "이미 로그인된 사용자")
     })
     // 폼 회원가입
-    //폼 회원가입
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
@@ -347,29 +351,6 @@ public class UserController {
 
         return ResponseEntity.ok(userDto); // 사용자 존재 시 200 OK 반환
     }
-
-
-//    @Operation(summary = "비밀번호 찾기", description = "사용자가 ID, 이메일, 인증코드, 새 비밀번호를 사용해 비밀번호를 재설정합니다.")
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
-//            @ApiResponse(responseCode = "400", description = "잘못된 요청")
-//    })
-//    //비밀번호 찾기
-//    @PostMapping("find/password")
-//    public ResponseEntity<String> findPassword(@RequestBody findPasswordRequestDto findPasswordRequestDto) {
-//
-//        try {
-//            userService.findPassword(
-//                    findPasswordRequestDto.getUserId(),
-//                    findPasswordRequestDto.getEmail(),
-//                    findPasswordRequestDto.getAuthCode(),
-//                    findPasswordRequestDto.getNewPassword()
-//            );
-//            return ResponseEntity.ok("비밀번호를 성공적으로 변경하였습니다.");
-//        } catch (Exception e) {
-//            return ResponseEntity.badRequest().body(e.getMessage());
-//        }
-//    }
 
     @Operation(summary = "비밀번호 변경", description = "로그인 상태에서 기존 비밀번호를 새 비밀번호로 변경합니다.")
     @ApiResponses(value = {
