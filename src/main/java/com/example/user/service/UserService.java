@@ -102,57 +102,48 @@ public class UserService {
     //@Transactional은 데이터베이스 작업을 하나의 작업 단위로 묶어준다.
     //폼회원가입
     @Transactional
-    public void saveFormUser(FormUserDto formUserDto, UserDto userDto, boolean link, HttpServletResponse response) {
+    public boolean saveFormUser(FormUserDto formUserDto, UserDto userDto, HttpServletResponse response) {
+        boolean linked = false;
         try {
-            // 기존 사용자인지 확인
             UserDto existingUser = userMapper.findByUserId(userDto.getUserId());
             if (existingUser == null) {
-                // 1. 비밀번호 암호화
                 String encodedPassword = bCryptPasswordEncoder.encode(formUserDto.getPasswd());
                 formUserDto.setPasswd(encodedPassword);
 
-                // 2. 토큰 생성 (Access Token 및 Refresh Token)
                 String accessToken = jwtUtils.createAccessToken(userDto.getUserId());
                 String refreshToken = jwtUtils.createRefreshToken(userDto.getUserId());
                 userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(refreshToken);
 
-                // 3. 사용자 정보 저장
-                userMapper.save(userDto);  // user 테이블에 삽입
-                formUserMapper.save(formUserDto);  // formuser 테이블에 삽입
+                userMapper.save(userDto);
+                formUserMapper.save(formUserDto);
 
-                // 4. 자동 연동 로직 수정
                 SocialUserDto socialuser = socialUserMapper.findByEmail(userDto.getEmail());
-
                 if (socialuser != null && socialuser.getEmail().equals(userDto.getEmail())) {
-                    // 소셜 유저가 존재하고 이메일이 일치하면 연동 처리
                     socialuser.setUserId(formUserDto.getUserId());
-                    socialUserMapper.save(socialuser);  // 소셜 유저 정보 업데이트
-                    System.out.println("소셜 로그인 & 폼 유저 자동 연동 성공");
+                    socialUserMapper.save(socialuser);
+                    linked = true;  // 연동 발생 표시
                 }
 
-                // 5. 토큰을 DB에 저장
                 userMapper.updateAccessTokenAndRefreshToken(userDto.getUserId(), accessToken, refreshToken);
 
-                // 6. JWT 토큰을 쿠키에 저장 (보안 속성 추가)
                 Cookie accessTokenCookie = new Cookie("access_token", accessToken);
                 accessTokenCookie.setHttpOnly(true);
-                accessTokenCookie.setSecure(true);  // HTTPS에서만 전송
-                accessTokenCookie.setMaxAge(3600);  // 1시간
+                accessTokenCookie.setSecure(true);
+                accessTokenCookie.setMaxAge(3600);
                 accessTokenCookie.setPath("/");
                 response.addCookie(accessTokenCookie);
             } else {
-                // 기존 사용자 예외 처리
                 throw new RuntimeException("이미 존재하는 사용자입니다.");
             }
         } catch (Exception e) {
-            // 예외 처리
             throw new RuntimeException("회원가입 처리 중 오류가 발생하였습니다.", e);
         }
+        return linked;
     }
 
 
-//리프레시토큰찾기
+    //리프레시토큰찾기
     public UserDto findByRefreshToken(String refreshToken) {
         return userMapper.findByRefreshToken(refreshToken);
 

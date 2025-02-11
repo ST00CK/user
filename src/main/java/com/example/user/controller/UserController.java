@@ -173,25 +173,25 @@ public class UserController {
     // 폼 회원가입
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
-        // 이미 로그인된 사용자 체크
         if (SecurityContextHolder.getContext().getAuthentication() != null &&
                 SecurityContextHolder.getContext().getAuthentication().isAuthenticated() &&
                 !(SecurityContextHolder.getContext().getAuthentication() instanceof AnonymousAuthenticationToken)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
-        // 클라이언트 요청에서 필요한 정보만 추출
+
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
-
         userDto.setFile("https://minio.bmops.org/stoock/Default.jpg");
 
-        // 사용자 정보 저장
-        userService.saveFormUser(formUserDto, userDto, true, response);
+        boolean linked = userService.saveFormUser(formUserDto, userDto, response);
 
-        // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();
-        responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
+        if (linked) {
+            responseMap.put("message", "회원가입이 완료되었습니다. 기존 소셜 계정과 자동 연동되었습니다.");
+        } else {
+            responseMap.put("message", "회원가입이 성공적으로 완료되었습니다.");
+        }
         responseMap.put("userId", userDto.getUserId());
 
         return ResponseEntity.ok(responseMap);
@@ -385,68 +385,63 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "로그인 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청")
     })
-    //소셜로그인
     @PostMapping("/api/kakao-token")
     public ResponseEntity<Map<String, String>> getAccessToken(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody Map<String, String> tokenData,
             @RequestHeader(value = "Accept", defaultValue = "application/json") String acceptHeader,
-            HttpServletRequest request // HttpServletRequest 추가
+            HttpServletRequest request
     ) {
         System.out.println("Authorization Header: " + authorizationHeader);
 
         // Authorization 헤더에서 Bearer Token 추출
-        String accessToken;
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            accessToken = authorizationHeader.substring(7); // 'Bearer ' 이후의 토큰 값 추출
-        } else {
-            accessToken = null;
-        }
-
+        String accessToken = (authorizationHeader != null && authorizationHeader.startsWith("Bearer "))
+                ? authorizationHeader.substring(7) : null;
         System.out.println("Access Token: " + accessToken);
-
 
         // 쿠키에서 refresh_token 추출
         String refreshTokenFromCookie = getRefreshTokenFromCookie(request);
-        String refreshToken = tokenData.get("refresh_token");
-
-        // 쿠키에 있는 refresh_token 우선 사용 (쿠키에 값이 있을 경우)
-        if (refreshTokenFromCookie != null) {
-            refreshToken = refreshTokenFromCookie;
-        }
-
+        String refreshToken = (refreshTokenFromCookie != null) ? refreshTokenFromCookie : tokenData.get("refresh_token");
         System.out.println("리프레시 토큰: " + refreshToken);
 
         // 토큰 유효성 검사
         if (accessToken == null || accessToken.isEmpty()) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Access Token이 없습니다.");
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("message", "Access Token이 없습니다."));
         }
 
         try {
             // 카카오 사용자 정보 조회
             KaKaoDto kaKaoDto = kaKaoService.getKakaoUserInfo(accessToken, refreshToken);
-            UserDto userdto = kaKaoDto.getUserDto();
+            UserDto userDto = kaKaoDto.getUserDto();
+            SocialUserDto socialUserDto = kaKaoDto.getSocialUserDto();
 
+            // 소셜 사용자 저장 및 연동 확인
+            String saveResult = userService.saveSocialUser(socialUserDto, userDto, true);
 
             Map<String, String> response = new HashMap<>();
             response.put("access_token", accessToken);
             response.put("refresh_token", refreshToken);
-            response.put("userId", userdto.getUserId());
-            response.put("name", userdto.getName());
-            response.put("email", userdto.getEmail());
-            response.put("file", userdto.getFile());
-            System.out.println("응답 리프레시 토큰: " + refreshToken);
+            response.put("userId", userDto.getUserId());
+            response.put("name", userDto.getName());
+            response.put("email", userDto.getEmail());
+            response.put("file", userDto.getFile());
+
+            // saveResult에 따른 메시지 추가
+            if ("소셜 로그인 & 폼 유저 자동 연동 성공".equals(saveResult)) {
+                response.put("message", "폼 & 소셜 연동이 성공적으로 완료되었습니다.");
+            } else if ("이미 연동된 회원입니다. 로그인 처리 진행.".equals(saveResult)) {
+                response.put("message", "이미 연동된 사용자입니다.");
+            } else {
+                response.put("message", "일반 소셜 로그인 성공");
+            }
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", "카카오 사용자 정보 요청에 실패했습니다.");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(500).body(errorResponse);
+            return ResponseEntity.status(500).body(Map.of("message", "카카오 사용자 정보 요청에 실패했습니다.", "error", e.getMessage()));
         }
     }
+
 
     // 쿠키에서 리프레시 토큰을 추출하는 메서드
     private String getRefreshTokenFromCookie(HttpServletRequest request) {
