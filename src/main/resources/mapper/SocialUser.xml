@@ -2,8 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.user.mapper.SocialUserMapper">
     <insert id="save" parameterType="SocialUserDto" keyProperty="userId">
-        insert into social_user (user_id,provider_type)
-        values (#{userId},#{providerType})
+        insert into social_user (user_id,provider_type,email)
+        values (#{userId},#{providerType}, #{email})
     </insert>
 
     <select id="findByUserId" parameterType="String" resultType="SocialUserDto">
@@ -20,7 +20,7 @@
     </select>
 
     <select id="findByEmail" parameterType="String" resultType="SocialUserDto">
-        select email
+        select *
         from social_user
         where email = #{email}
     </select>
