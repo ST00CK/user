@@ -78,6 +78,7 @@ public class KaKaoService {
             SocialUserDto socialUserDto = new SocialUserDto();
             socialUserDto.setUserId(jsonNode.get("id").asText());
             socialUserDto.setProviderType("KAKAO");
+            socialUserDto.setEmail(jsonNode.get("kakao_account").get("email").asText());
 
             // UserDto 설정
             UserDto userDto = new UserDto();

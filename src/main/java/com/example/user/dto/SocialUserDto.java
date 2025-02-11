@@ -16,4 +16,5 @@ public class SocialUserDto {
 
     private String userId;
     private String providerType;
+    private String email;
 }

@@ -49,12 +49,10 @@ public class UserController {
     private final MinioService minioService;
 
 
-
     @GetMapping("/user/{userId}")
     public UserDto getUserInfo(@PathVariable String userId) {
         return userService.getUserInfo(userId);
     }
-
 
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
@@ -94,13 +92,14 @@ public class UserController {
         if (email == null || email.isEmpty()) {
             return ResponseEntity.badRequest().body("이메일을 입력해주세요.");
         }
+
         // 인증코드 생성
         String authCode = emailService.generateAuthCode();
+
         try {
-            // 이메일 전송
-            emailService.sendEmail(email, authCode);
-            // 인증코드 세션 저장
-            emailService.saveAuthCodeToSession(email, authCode, session);
+            // 이메일 전송과 인증코드 세션 저장을 하나의 메서드에서 처리
+            emailService.sendEmailAndSaveAuthCode(email, authCode, session);
+
             return ResponseEntity.ok("인증 이메일이 전송되었습니다.");
         } catch (MessagingException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이메일 전송에 실패했습니다.");
@@ -124,19 +123,42 @@ public class UserController {
             return ResponseEntity.badRequest().body("이메일과 인증 코드를 입력해주세요.");
         }
 
-        try {
-            boolean isVerified = emailService.verifyAuthCode(email, inputCode, session);
+        // 세션에서 인증 코드 가져오기
+        String storedAuthCode = (String) session.getAttribute("authCode");
 
-            if (isVerified) {
-                return ResponseEntity.ok("인증이 성공적으로 완료되었습니다.");
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 코드가 올바르지 않습니다.");
-            }
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        if (storedAuthCode == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("인증 코드가 저장되지 않았습니다.");
+        }
+
+        // 인증 코드 비교
+        if (storedAuthCode.equals(inputCode)) {
+            return ResponseEntity.ok("인증이 성공적으로 완료되었습니다.");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 코드가 올바르지 않습니다.");
         }
     }
 
+
+    @PostMapping("find/password")
+    public ResponseEntity<String> sendPasswordFindEmail(@RequestBody Map<String, String> request, HttpSession session) {
+        String email = request.get("email");
+
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body("이메일을 입력해주세요.");
+        }
+        //인증코드 생성
+        String authCode = emailService.generateAuthCode();
+
+        try {
+            emailService.sendPasswordFindEmail(email, authCode, session);
+            //인증코드 세션 저장
+            session.setAttribute("authCode", authCode);
+            return ResponseEntity.ok("인증코드가 전송되었습니다.");
+        } catch (MessagingException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이메일 전송중 오류가 발생했습니다.");
+        }
+
+    }
 
     @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")
     @ApiResponses(value = {
@@ -144,6 +166,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "이미 로그인된 사용자")
     })
     // 폼 회원가입
+    //폼 회원가입
     @PostMapping("/formuser")
     public ResponseEntity<Map<String, String>> saveFormUser(@RequestBody FormInfoDto formInfoDto, HttpServletResponse response) {
         // 이미 로그인된 사용자 체크
@@ -153,19 +176,14 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "이미 로그인된 사용자입니다."));
         }
-
         // 클라이언트 요청에서 필요한 정보만 추출
         FormUserDto formUserDto = formInfoDto.getFormUserDto();
         UserDto userDto = formInfoDto.getUserDto();
 
         userDto.setFile("https://minio.bmops.org/stoock/Default.jpg");
 
-        // 소셜 계정 연동 여부 체크
-        boolean link = true; // 소셜 계정을 연동할 경우 true
-
-        // 사용자 정보 저장 및 소셜 연동
-        String result = userService.saveFormUser(formUserDto, userDto, link, response);
-        System.out.println(result);
+        // 사용자 정보 저장
+        userService.saveFormUser(formUserDto, userDto, true, response);
 
         // 응답 메시지 반환
         Map<String, String> responseMap = new HashMap<>();
@@ -174,7 +192,6 @@ public class UserController {
 
         return ResponseEntity.ok(responseMap);
     }
-
 
 
     @Operation(summary = "프로필 사진 변경", description = "유저의 프로필 변경")
@@ -245,6 +262,7 @@ public class UserController {
                     .body(Map.of("message", "비밀번호가 일치하지 않습니다."));
         }
 
+
         UserDto userInfo = userMapper.findByUserId(userId);
 
         // 응답 메시지 생성
@@ -257,33 +275,6 @@ public class UserController {
 
         return ResponseEntity.ok(responseMap);
     }
-
-
-    @Operation(
-            summary = "소셜유저, 폼유저 연동",
-            description = "소셜유저와 폼 유저를 연동합니다. 연동 여부에 따라 처리됩니다."
-    )
-    @PostMapping("/link")
-    public ResponseEntity<String> linkSocialToFormUser(
-            @Parameter(
-                    description = "소셜 유저 정보, 폼 유저 정보, 유저 정보 및 연동 여부를 포함한 요청 데이터",
-                    required = true,
-                    schema = @Schema(implementation = UserLinkRequestDto.class)
-            )
-            @RequestBody UserLinkRequestDto requestDto
-    ) {
-        // 요청 바디에서 소셜유저, 폼유저, 유저 정보 dto 추출
-        SocialUserDto socialUserDto = requestDto.getSocialUserDto();
-        FormUserDto formUserDto = requestDto.getFormUserDto();
-        UserDto userDto = requestDto.getUserDto();
-        boolean link = requestDto.isLink(); // 연동 여부 추출
-
-        // 연동 여부에 맞게 메서드 호출
-        String resultMessage = userService.linkSocialToFormUser(socialUserDto, userDto, link);
-
-        return ResponseEntity.ok(resultMessage);
-    }
-
 
     @Operation(summary = "폼 유저 액세스 토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
     @ApiResponses(value = {
@@ -358,27 +349,27 @@ public class UserController {
     }
 
 
-    @Operation(summary = "비밀번호 찾기", description = "사용자가 ID, 이메일, 인증코드, 새 비밀번호를 사용해 비밀번호를 재설정합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청")
-    })
-    //비밀번호 찾기
-    @PostMapping("find/password")
-    public ResponseEntity<String> findPassword(@RequestBody findPasswordRequestDto findPasswordRequestDto) {
-
-        try {
-            userService.findPassword(
-                    findPasswordRequestDto.getUserId(),
-                    findPasswordRequestDto.getEmail(),
-                    findPasswordRequestDto.getAuthCode(),
-                    findPasswordRequestDto.getNewPassword()
-            );
-            return ResponseEntity.ok("비밀번호를 성공적으로 변경하였습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+//    @Operation(summary = "비밀번호 찾기", description = "사용자가 ID, 이메일, 인증코드, 새 비밀번호를 사용해 비밀번호를 재설정합니다.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
+//            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+//    })
+//    //비밀번호 찾기
+//    @PostMapping("find/password")
+//    public ResponseEntity<String> findPassword(@RequestBody findPasswordRequestDto findPasswordRequestDto) {
+//
+//        try {
+//            userService.findPassword(
+//                    findPasswordRequestDto.getUserId(),
+//                    findPasswordRequestDto.getEmail(),
+//                    findPasswordRequestDto.getAuthCode(),
+//                    findPasswordRequestDto.getNewPassword()
+//            );
+//            return ResponseEntity.ok("비밀번호를 성공적으로 변경하였습니다.");
+//        } catch (Exception e) {
+//            return ResponseEntity.badRequest().body(e.getMessage());
+//        }
+//    }
 
     @Operation(summary = "비밀번호 변경", description = "로그인 상태에서 기존 비밀번호를 새 비밀번호로 변경합니다.")
     @ApiResponses(value = {
