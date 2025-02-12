@@ -27,7 +27,7 @@ public class SessionCookieFilter extends OncePerRequestFilter {
             response.addCookie(sessionCookie);
 
             // SameSite 설정을 동적으로 적용
-            String setCookieHeader = String.format("JSESSIONID=%s; HttpOnly; Max-Age=3600; Path=/; Secure; SameSite=%s", session.getId(), sameSite);
+            String setCookieHeader = String.format("JSESSIONID=%s; HttpOnly; Max-Age=3600; Path=/; Secure=false; SameSite=%s", session.getId(), sameSite);
             response.setHeader("Set-Cookie", setCookieHeader);
         }
         filterChain.doFilter(request, response);
