@@ -91,10 +91,9 @@ public class SecurityConfig {
     // SPRING SECURITY 설정의 핵심 요청 및 인증/인가 규칙을 정의
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
-        http
-                .cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
-                    CorsConfiguration corsConfiguration = new CorsConfiguration(); // CORS 설정 객체 생성
-                    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:3000")); // 허용할 도메인 설정
+        http.cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
+                    CorsConfiguration corsConfiguration = new CorsConfiguration();
+                    corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://front.bmops.org")); // 여러 도메인 허용
                     corsConfiguration.setAllowedMethods(Collections.singletonList("*")); // 모든 HTTP 메서드 허용
                     corsConfiguration.setAllowCredentials(true); // 자격 증명 허용
                     corsConfiguration.setAllowedHeaders(Collections.singletonList("*")); // 모든 헤더 허용
