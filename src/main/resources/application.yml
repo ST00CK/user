@@ -66,5 +66,4 @@ user:
   service:
     url: ${USER_SERVICE_URL}
 
-cookie:
-  same-site: ${COOKIE_SAMESITE}
+

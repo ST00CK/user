@@ -12,8 +12,9 @@ import java.io.IOException;
 
 public class SessionCookieFilter extends OncePerRequestFilter {
 
-    @Value("${COOKIE_SAMESITE}") // 환경 변수 읽기
-    private String sameSite;
+
+    private String sameSite = "none";
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -25,6 +26,7 @@ public class SessionCookieFilter extends OncePerRequestFilter {
             sessionCookie.setPath("/");
             sessionCookie.setSecure(true);  // HTTPS 사용 시 true 설정 권장
             response.addCookie(sessionCookie);
+            System.out.println("samesite : " + sameSite);
 
             // SameSite 설정을 동적으로 적용
             String setCookieHeader = String.format("JSESSIONID=%s; HttpOnly; Max-Age=3600; Path=/; Secure=false; SameSite=%s", session.getId(), sameSite);
