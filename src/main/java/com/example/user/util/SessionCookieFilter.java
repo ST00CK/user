@@ -24,8 +24,8 @@ public class SessionCookieFilter extends OncePerRequestFilter {
             sessionCookie.setHttpOnly(true);
             sessionCookie.setMaxAge(60 * 60);  // 1시간 유효
             sessionCookie.setPath("/");
-            sessionCookie.setSecure(true);  // HTTPS 사용 시 true 설정 권장
-            response.addCookie(sessionCookie);
+            sessionCookie.setSecure(false);  // HTTPS 사용 시 true 설정 권장
+//            response.addCookie(sessionCookie);
             System.out.println("samesite : " + sameSite);
 
             // SameSite 설정을 동적으로 적용
