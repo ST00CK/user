@@ -236,7 +236,7 @@ public class UserController {
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "프로필 사진 변경 중 오류가 발생하였습니다."));
+                    .body(Map.of("message", "프로필 사진 변경 중 오류가 발생하였습니다." + e.getMessage()));
         }
     }
 
