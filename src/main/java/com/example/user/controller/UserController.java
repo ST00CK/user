@@ -138,6 +138,29 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "비밀번호 재설정", description = "아이디와 새 비밀번호를 입력받아 비밀번호를 재설정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호가 성공적으로 변경되었습니다."),
+            @ApiResponse(responseCode = "400", description = "아이디와 새 비밀번호를 입력해주세요."),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류가 발생했습니다.")
+    })
+
+    @PostMapping("reset/password")
+    public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> request, HttpSession session) {
+        String userId = request.get("userId");
+        String newPassword = request.get("newPassword");
+
+        if (userId == null || newPassword == null) {
+            return ResponseEntity.badRequest().body("아이디와 새 비밀번호를 입력해주세요.");
+        }
+        try {
+            userService.findPassword(userId, newPassword);
+            return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @Operation(summary = "비밀번호 찾기 이메일 전송", description = "이메일을 통해 비밀번호 찾기 인증코드를 전송합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증코드 전송 성공"),
@@ -162,7 +185,6 @@ public class UserController {
         } catch (MessagingException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이메일 전송중 오류가 발생했습니다.");
         }
-
     }
 
     @Operation(summary = "폼 회원가입", description = "폼 데이터를 사용하여 사용자 정보를 저장합니다.")

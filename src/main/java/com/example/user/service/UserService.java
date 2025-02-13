@@ -8,6 +8,7 @@ import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.util.JwtUtils;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -149,6 +150,18 @@ public class UserService {
 
     }
 
+    @Transactional
+    public void findPassword(String userId, String newPassword) {
+        FormUserDto formUserDto = formUserMapper.findById(userId);
+        if (formUserDto == null) {
+            throw new RuntimeException("해당 유저가 존재하지 않습니다.");
+        }
+        if (newPassword == null || newPassword.isEmpty()) {
+            throw new RuntimeException("비밀번호가 비어있습니다.");
+        }
+        String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
+        formUserMapper.findPassword(userId, encodedPassword);
+    }
 
     //로그인한 상태에서 비밀번호 변경
     @Transactional
