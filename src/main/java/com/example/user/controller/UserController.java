@@ -49,10 +49,7 @@ public class UserController {
     private final MinioService minioService;
 
 
-    @GetMapping("/user/{userId}")
-    public UserDto getUserInfo(@PathVariable String userId) {
-        return userService.getUserInfo(userId);
-    }
+
 
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
