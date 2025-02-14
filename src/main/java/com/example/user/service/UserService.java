@@ -8,13 +8,15 @@ import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.SocialUserMapper;
 import com.example.user.mapper.UserMapper;
 import com.example.user.util.JwtUtils;
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 @Service
@@ -30,8 +32,14 @@ public class UserService {
 
 
     //open feign 유저정보 보내기
-    public UserDto getUserInfo(String userId) {
-        return userClient.getUserInfo(userId);
+    public void getUserInfo(String userId) {
+        UserDto user = userMapper.getUserInfo(userId);
+        if (user != null) {
+            Map<String, String> request = new HashMap<>();
+            request.put("userId", user.getUserId());
+            request.put("profile", user.getFile());
+            userClient.createUser(request);
+        }
     }
 
     //폼유저 찾기
@@ -70,6 +78,9 @@ public class UserService {
                 // 신규 유저면 회원가입 처리
                 userMapper.socialSave(userDto);
                 socialUserMapper.save(socialUserDto);
+
+
+
                 return "소셜 회원가입 성공";
             }
 
@@ -86,6 +97,8 @@ public class UserService {
                     return "이미 연동된 회원입니다. 로그인 처리 진행.";
                 }
             }
+
+            getUserInfo(userDto.getUserId());
 
             // 기존 사용자인 경우, 토큰 정보 업데이트
             userMapper.updateAccessTokenAndRefreshToken(
@@ -118,6 +131,10 @@ public class UserService {
 
                 userMapper.save(userDto);
                 formUserMapper.save(formUserDto);
+
+//              userClient.createUser(userDto.getUserId(),userDto.getFile());
+                getUserInfo(userDto.getUserId());
+
 
                 SocialUserDto socialuser = socialUserMapper.findByEmail(userDto.getEmail());
                 if (socialuser != null && socialuser.getEmail().equals(userDto.getEmail())) {
