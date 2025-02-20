@@ -9,7 +9,7 @@ import java.util.Map;
 @FeignClient(name = "userClient", url = "${user.service.url}")
 public interface UserClient {
 
-    @PostMapping("/user/create")
+    @PostMapping("/friend/user/create")
     UserDto createUser(@RequestBody Map<String, String> request);
 }
 
