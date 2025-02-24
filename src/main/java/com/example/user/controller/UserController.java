@@ -49,9 +49,6 @@ public class UserController {
     private final MinioService minioService;
 
 
-
-
-
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
@@ -71,6 +68,21 @@ public class UserController {
             return ResponseEntity.ok(Map.of("message", "로그아웃이 성공적으로 완료되었습니다."));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "로그아웃 처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    @Operation(summary = "회원탈퇴", description = "계정이 삭제됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
+    @PostMapping("deleteUser")
+    public ResponseEntity<Map<String,String>> deleteUser(@RequestBody UserDto userdto) {
+        try {
+            userService.deleteUser(userdto.getUserId());
+            return ResponseEntity.ok(Map.of("message", "계정을 삭제하였습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "회원 탈퇴중 오류 발생하였습니다."));
         }
     }
 
