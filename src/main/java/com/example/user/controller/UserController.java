@@ -73,7 +73,7 @@ public class UserController {
 
     @Operation(summary = "회원탈퇴", description = "계정이 삭제됩니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+            @ApiResponse(responseCode = "200", description = "회원탈퇴 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청")
     })
     @PostMapping("deleteUser")
