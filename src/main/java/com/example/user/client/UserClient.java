@@ -11,6 +11,10 @@ public interface UserClient {
 
     @PostMapping("/friend/user/create")
     UserDto createUser(@RequestBody Map<String, String> request);
+
+
+    @PostMapping("/friend/user/delete")
+    void deleteUser(@RequestBody Map<String, String> request);
 }
 
 

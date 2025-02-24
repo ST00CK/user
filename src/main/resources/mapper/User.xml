@@ -59,17 +59,16 @@
         where refresh_token = #{refreshToken}
     </select>
 
-<!--    <select id="findByEmail" parameterType="String" resultType="UserDto">-->
-<!--        select *-->
-<!--        from user-->
-<!--        where email = #{email}-->
-<!--    </select>-->
+    <!--    <select id="findByEmail" parameterType="String" resultType="UserDto">-->
+    <!--        select *-->
+    <!--        from user-->
+    <!--        where email = #{email}-->
+    <!--    </select>-->
 
     <select id="findByEmail" parameterType="String" resultType="UserDto">
         select *
         from user
-        where email = #{email}
-            limit 1
+        where email = #{email} limit 1
     </select>
 
 
@@ -79,5 +78,9 @@
         where user_id = #{user_id}
     </select>
 
+
+    <delete id="deleteUser" parameterType="String">
+        delete from user where user_id = #{userId}
+    </delete>
 
 </mapper>

@@ -42,6 +42,25 @@ public class UserService {
         }
     }
 
+    public void deleteUserInfo(String userId) {
+        if (userId != null) {
+            userMapper.deleteUser(userId);
+            Map<String, String> request = new HashMap<>();
+            request.put("userId", userId);
+            userClient.deleteUser(request);
+        }
+    }
+
+    @Transactional
+    public void deleteUser(String userId) {
+        UserDto user = userMapper.findByUserId(userId);
+
+        if (user != null) {
+            userMapper.deleteUser(user.getUserId());
+            deleteUserInfo(user.getUserId());
+        }
+    }
+
     //폼유저 찾기
     public FormUserDto getUserById(String userId) {
         return formUserMapper.findById(userId);
