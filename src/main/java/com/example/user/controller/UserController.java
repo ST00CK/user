@@ -1,5 +1,6 @@
 package com.example.user.controller;
 
+import com.example.user.client.UserClient;
 import com.example.user.dto.*;
 import com.example.user.mapper.FormUserMapper;
 import com.example.user.mapper.UserMapper;
@@ -47,6 +48,7 @@ public class UserController {
     private final FormJwtUtils formJwtUtils;
     private final EmailService emailService;
     private final MinioService minioService;
+    private final UserClient userClient;
 
 
     @Operation(summary = "로그아웃", description = "사용자가 로그아웃합니다.")
@@ -252,9 +254,13 @@ public class UserController {
             String fileUrl = "https://minio.bmops.org/stoock/" + userDto.getUserId() + "/" + fileName;
 
             // 프로필 사진 URL 업데이트
-
             userMapper.updateProfileImage(userId, fileUrl); // 프로필 이미지 DB 업데이트
             userDto.setFile(fileUrl);
+
+            Map<String, String> request = new HashMap<>();
+            request.put("userId", userId);
+            request.put("profile", fileUrl);
+            userClient.uploadProfile(request);
 
             // 응답 메시지 반환
             Map<String, String> responseMap = new HashMap<>();

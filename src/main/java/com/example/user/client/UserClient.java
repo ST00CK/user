@@ -15,6 +15,9 @@ public interface UserClient {
 
     @PostMapping("/friend/user/delete")
     void deleteUser(@RequestBody Map<String, String> request);
+
+    @PostMapping("/friend/user/edit")
+    void uploadProfile(@RequestBody Map<String, String> request);
 }
 
 

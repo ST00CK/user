@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
-@EnableFeignClients
+@EnableFeignClients // feign 활성화
 @ComponentScan({"com.example.user.*"})
 public class UserApplication {
 

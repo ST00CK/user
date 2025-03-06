@@ -35,7 +35,7 @@
         where access_token = #{accessToken}
     </update>
 
-    <update id="updateProfileImage" parameterType="map">
+    <update id="updateProfileImage">
         update user
         set file = #{file}
         where user_id = #{userId}
