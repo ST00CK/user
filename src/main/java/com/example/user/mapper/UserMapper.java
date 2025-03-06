@@ -21,7 +21,7 @@ public interface UserMapper {
 
     void invalidateAccessToken(String accessToken);
 
-    int updateProfileImage(String userId, String file);
+    void updateProfileImage(String userId, String file);
 
     UserDto findByRefreshToken(String refreshToken);
 

@@ -81,14 +81,6 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         return new CustomUserDetailsService(userMapper, formUserMapper);
     }
-
-    //Spring Security5.x버전부터 기존 xml 또는 체이닝 메서드 방식보다 람다 표현식을 활용한 구성방식이 도입
-    //가독성,간결성,유지보수성을 크게 향상 시키기 위해 도입됨
-    //기존 체이닝 방식으로 사용하면 코드가 길어지지만 람다식을 활용하면 메서드 체인 내부의 구조가 단순화되고 읽기 쉬워진다.
-    // (parameter) <- {function body}
-    // parameter = auth
-    // fucntion body = 입력값을 사용해 수행할 작업
-    // SPRING SECURITY 설정의 핵심 요청 및 인증/인가 규칙을 정의
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http.cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
@@ -112,15 +104,11 @@ public class SecurityConfig {
         // 세션 쿠키 설정
         http
                 .addFilterBefore(new SessionCookieFilter(), UsernamePasswordAuthenticationFilter.class);
-
-
         // CustomRequestWrappingFilter 및 JwtAuthenticationFilter 설정
         http.addFilterBefore(new CustomRequestWrappingFilter(), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new JwtAuthenticationFilter(formJwtUtils, authenticationManager), UsernamePasswordAuthenticationFilter.class);
-
         // OAuth2LoginFilter 등록
         http.addFilterBefore(new OAuth2LoginFilter(kaKaoService, jwtUtils, userService), OAuth2LoginAuthenticationFilter.class);
-
         return http.build();
     }
 }

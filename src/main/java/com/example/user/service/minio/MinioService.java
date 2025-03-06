@@ -1,6 +1,9 @@
 package com.example.user.service.minio;
 
+import com.example.user.client.UserClient;
 import com.example.user.config.MinioConfig;
+import com.example.user.dto.UserDto;
+import com.example.user.mapper.UserMapper;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -13,16 +16,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class MinioService implements ObjectStorage {
 
     private final MinioClient client;
+    private final UserMapper userMapper;
+    private final UserClient userClient;
 
-    public MinioService(MinioConfig config) {
+    public MinioService(MinioConfig config, UserMapper userMapper, UserClient userClient) {
         this.client = config.initMinioClient();
+        this.userMapper = userMapper;
+        this.userClient = userClient;
     }
+
 
     @Override
     public String uploadFile(String bucketName, String directory, MultipartFile file) {
@@ -40,6 +50,7 @@ public class MinioService implements ObjectStorage {
                  InternalException e) {
             throw new RuntimeException(e);
         }
+
         return fileName;
     }
 
